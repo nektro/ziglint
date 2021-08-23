@@ -6,7 +6,7 @@ pub fn build(b: *std.build.Builder) void {
 
     const mode = b.standardReleaseOptions();
 
-    const exe = b.addExecutable("zig-lint", "src/main.zig");
+    const exe = b.addExecutable("ziglint", "src/main.zig");
     exe.setTarget(target);
     exe.setBuildMode(mode);
     deps.addAllTo(exe);
