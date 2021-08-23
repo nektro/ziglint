@@ -1,3 +1,5 @@
+// ./bad/double_import.zig:5:11: found duplicate import of "std"
+
 const std = @import("std");
 
 const x = @import("std");
