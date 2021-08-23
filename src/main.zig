@@ -13,6 +13,8 @@ pub fn main() !void {
     var dir = try std.fs.cwd().openDir("./", .{ .iterate = true });
     defer dir.close();
 
+    const out = std.io.getStdOut().writer();
+
     var walker = try dir.walk(alloc);
     defer walker.deinit();
     while (try walker.next()) |item| {
@@ -42,7 +44,7 @@ pub fn main() !void {
         const tokens = list.toOwnedSlice();
 
         inline for (linters) |ns| {
-            try ns.work(alloc2, item.path, tokens, nulcont);
+            try ns.work(alloc2, item.path, tokens, nulcont, out);
         }
     }
     std.debug.print("\n", .{});

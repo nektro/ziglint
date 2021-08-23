@@ -1,7 +1,7 @@
 const std = @import("std");
 const main = @import("../main.zig");
 
-pub fn work(alloc: *std.mem.Allocator, file_name: []const u8, tokens: []const std.zig.Token, source: [:0]const u8) !void {
+pub fn work(alloc: *std.mem.Allocator, file_name: []const u8, tokens: []const std.zig.Token, source: [:0]const u8, writer: std.fs.File.Writer) !void {
     //
     var map = std.StringHashMap(main.Loc).init(alloc);
     defer map.deinit();
@@ -28,7 +28,7 @@ pub fn work(alloc: *std.mem.Allocator, file_name: []const u8, tokens: []const st
             if (!res.found_existing) {
                 res.value_ptr.* = loc;
             } else {
-                std.log.warn("./{s}:{d}:{d}: found duplicate import of {s}", .{
+                try writer.print("./{s}:{d}:{d}: found duplicate import of {s}", .{
                     file_name,
                     loc.line,
                     loc.pos,
