@@ -28,7 +28,7 @@ pub fn work(alloc: *std.mem.Allocator, file_name: []const u8, tokens: []const st
             if (!res.found_existing) {
                 res.value_ptr.* = loc;
             } else {
-                try writer.print("./{s}:{d}:{d}: found duplicate import of {s}", .{
+                try writer.print("./{s}:{d}:{d}: found duplicate import of {s}\n", .{
                     file_name,
                     loc.line,
                     loc.pos,
