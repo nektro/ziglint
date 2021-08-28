@@ -24,7 +24,6 @@ pub fn main() !void {
 
         if (item.kind != .File) continue;
         if (!std.mem.endsWith(u8, item.path, ".zig")) continue;
-        // std.log.debug("{s}", .{item.path});
 
         const f = try dir.openFile(item.path, .{});
         defer f.close();
