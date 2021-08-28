@@ -10,6 +10,6 @@ pub fn work(alloc: *std.mem.Allocator, file_name: []const u8, tokens: []const st
         const lll = std.mem.trimLeft(u8, line, " ");
         const col = line.len - lll.len + 1;
         if (!std.mem.startsWith(u8, lll, "// TODO")) continue;
-        try writer.print("./{s}:{d}:{d}: TODO: {s}\n", .{ file_name, i, col, std.mem.trim(u8, lll[8..], " ") });
+        try writer.print("./{s}:{d}:{d}: TODO: {s}\n", .{ file_name, i, col, std.mem.trim(u8, lll[7..], " ") });
     }
 }
