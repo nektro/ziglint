@@ -47,7 +47,6 @@ pub fn main() !void {
             try ns.work(alloc2, item.path, tokens, nulcont, out);
         }
     }
-    std.debug.print("\n", .{});
 }
 
 fn negspan(alloc: *std.mem.Allocator, comptime T: type, input: []const T, comptime term: T) ![:term]const T {
