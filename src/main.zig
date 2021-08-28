@@ -3,6 +3,7 @@ const range = @import("range").range;
 
 const linters = [_]type{
     @import("./tools/dupe_import.zig"),
+    @import("./tools/todo.zig"),
 };
 
 pub fn main() !void {
