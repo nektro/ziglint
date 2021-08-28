@@ -24,6 +24,8 @@ pub fn main() !void {
 
         if (item.kind != .File) continue;
         if (!std.mem.endsWith(u8, item.path, ".zig")) continue;
+        // TODO eventually do .gitignore parsing
+        if (std.mem.startsWith(u8, item.path, "zig-cache")) continue;
 
         const f = try dir.openFile(item.path, .{});
         defer f.close();
