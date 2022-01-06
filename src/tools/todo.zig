@@ -1,9 +1,10 @@
 const std = @import("std");
 
-pub fn work(alloc: std.mem.Allocator, file_name: []const u8, tokens: []const std.zig.Token, source: [:0]const u8, writer: std.fs.File.Writer) !void {
+pub fn work(alloc: std.mem.Allocator, file_name: []const u8, tokens: []const std.zig.Token, ast: std.zig.Ast, source: [:0]const u8, writer: std.fs.File.Writer) !void {
     //
     _ = alloc;
     _ = tokens;
+    _ = ast;
 
     var i: usize = 1;
     var iter = std.mem.split(u8, source[0..source.len], "\n");

@@ -38,6 +38,8 @@ pub fn main() !void {
         var tks = std.zig.Tokenizer.init(nulcont);
         var list = std.ArrayList(std.zig.Token).init(alloc2);
 
+        const ast = try std.zig.parse(alloc2, nulcont);
+
         while (true) {
             const tok = tks.next();
             if (tok.tag == .eof) break;
@@ -46,7 +48,7 @@ pub fn main() !void {
         const tokens = list.toOwnedSlice();
 
         inline for (linters) |ns| {
-            try ns.work(alloc2, item.path, tokens, nulcont, out);
+            try ns.work(alloc2, item.path, tokens, ast, nulcont, out);
         }
     }
 }
