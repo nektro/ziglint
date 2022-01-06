@@ -13,9 +13,8 @@ pub fn work(alloc: std.mem.Allocator, file_name: []const u8, tokens: []const std
         const b = tokens[i + 1].tag == .l_paren;
         const c = tokens[i + 2].tag == .string_literal;
         const d = tokens[i + 3].tag == .r_paren;
-        const e = tokens[i + 4].tag == .semicolon;
 
-        if (a and b and c and d and e) {
+        if (a and b and c and d) {
             const builtin = tok;
             const string = tokens[i + 2];
 
