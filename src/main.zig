@@ -8,7 +8,7 @@ const linters = [_]type{
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const alloc = &gpa.allocator;
+    const alloc = gpa.allocator();
     defer _ = gpa.deinit();
 
     var dir = try std.fs.cwd().openDir("./", .{ .iterate = true });
@@ -20,7 +20,7 @@ pub fn main() !void {
     defer walker.deinit();
     while (try walker.next()) |item| {
         var arena = std.heap.ArenaAllocator.init(alloc);
-        const alloc2 = &arena.allocator;
+        const alloc2 = arena.allocator();
         defer arena.deinit();
 
         if (item.kind != .File) continue;
@@ -51,7 +51,7 @@ pub fn main() !void {
     }
 }
 
-fn negspan(alloc: *std.mem.Allocator, comptime T: type, input: []const T, comptime term: T) ![:term]const T {
+fn negspan(alloc: std.mem.Allocator, comptime T: type, input: []const T, comptime term: T) ![:term]const T {
     var list = std.ArrayList(T).init(alloc);
     defer list.deinit();
     for (input) |c| try list.append(c);
