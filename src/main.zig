@@ -35,20 +35,13 @@ pub fn main() !void {
         const content = try r.readAllAlloc(alloc2, 1 * 1024 * 1024 * 1024 * 4);
         const nulcont = try negspan(alloc2, u8, content, 0);
 
-        var tks = std.zig.Tokenizer.init(nulcont);
-        var list = std.ArrayList(std.zig.Token).init(alloc2);
-
-        const ast = try std.zig.parse(alloc2, nulcont);
-
-        while (true) {
-            const tok = tks.next();
-            if (tok.tag == .eof) break;
-            try list.append(tok);
-        }
-        const tokens = list.toOwnedSlice();
+        var src = Source{
+            .alloc = alloc2,
+            .source = nulcont,
+        };
 
         inline for (linters) |ns| {
-            try ns.work(alloc2, item.path, tokens, ast, nulcont, out);
+            try ns.work(alloc2, item.path, &src, out);
         }
     }
 }
@@ -78,3 +71,25 @@ pub fn locToLoc(source: [:0]const u8, loc: std.zig.Token.Loc) Loc {
     }
     return Loc{ .line = line, .pos = pos };
 }
+
+pub const Source = struct {
+    alloc: std.mem.Allocator,
+    source: [:0]const u8,
+    _tokens: ?[]const std.zig.Token = null,
+
+    pub fn tokens(self: *Source) ![]const std.zig.Token {
+        if (self._tokens) |_| {
+            return self._tokens.?;
+        }
+        var tks = std.zig.Tokenizer.init(self.source);
+        var list = std.ArrayList(std.zig.Token).init(self.alloc);
+
+        while (true) {
+            const tok = tks.next();
+            if (tok.tag == .eof) break;
+            try list.append(tok);
+        }
+        self._tokens = list.toOwnedSlice();
+        return self._tokens.?;
+    }
+};

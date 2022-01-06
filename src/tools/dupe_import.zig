@@ -1,9 +1,10 @@
 const std = @import("std");
 const main = @import("../main.zig");
 
-pub fn work(alloc: std.mem.Allocator, file_name: []const u8, tokens: []const std.zig.Token, ast: std.zig.Ast, source: [:0]const u8, writer: std.fs.File.Writer) !void {
+pub fn work(alloc: std.mem.Allocator, file_name: []const u8, src: *main.Source, writer: std.fs.File.Writer) !void {
     //
-    _ = ast;
+    const source = src.source;
+    const tokens = try src.tokens();
 
     var map = std.StringHashMap(main.Loc).init(alloc);
     defer map.deinit();
