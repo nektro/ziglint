@@ -4,5 +4,5 @@ license: MIT
 description: A linting suite for Zig
 bin: True
 provides: ["ziglint"]
-dev_dependencies:
+root_dependencies:
   - src: git https://github.com/nektro/zig-range
