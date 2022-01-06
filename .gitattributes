@@ -1,6 +1,10 @@
 # Auto detect text files and perform LF normalization
 * text=auto
-# TODO https://github.com/ziglang/zig-specs/issues/38
+
+# https://github.com/ziglang/zig-spec/issues/38
 *.zig text eol=lf
+
+# Zigmod
 zig.mod text eol=lf
 zigmod.* text eol=lf
+zig.mod linguist-language=YAML
