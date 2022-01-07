@@ -6,3 +6,4 @@ bin: True
 provides: ["ziglint"]
 root_dependencies:
   - src: git https://github.com/nektro/zig-range
+  - src: git https://github.com/nektro/zig-flag

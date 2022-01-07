@@ -1,2 +1,4 @@
 2
 git https://github.com/nektro/zig-range commit-4b2f12808aa09be4b27a163efc424dd4e0415992
+git https://github.com/nektro/zig-flag commit-c066b62dc13640279c30b3b8b05aca6fd7a43f6e
+git https://github.com/nektro/zig-extras commit-fa1138e1a0a2f666b2cd26818e280b6171e417ac

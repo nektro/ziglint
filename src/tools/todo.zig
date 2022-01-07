@@ -1,7 +1,7 @@
 const std = @import("std");
 const main = @import("../main.zig");
 
-pub fn work(alloc: std.mem.Allocator, file_name: []const u8, src: *main.Source, writer: std.fs.File.Writer) !void {
+pub fn work(alloc: std.mem.Allocator, file_name: []const u8, src: *main.Source, writer: std.fs.File.Writer) main.WorkError!void {
     //
     _ = alloc;
     const source = src.source;

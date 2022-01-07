@@ -1,15 +1,49 @@
 const std = @import("std");
+const string = []const u8;
 const range = @import("range").range;
+const flag = @import("flag");
 
-const linters = [_]type{
-    @import("./tools/dupe_import.zig"),
-    @import("./tools/todo.zig"),
+const linters = [_]fn (std.mem.Allocator, []const u8, *Source, std.fs.File.Writer) WorkError!void{
+    @import("./tools/dupe_import.zig").work,
+    @import("./tools/todo.zig").work,
+};
+
+pub const WorkError = std.mem.Allocator.Error || std.fs.File.Writer.Error || error{};
+
+const Rule = enum {
+    dupe_import,
+    todo,
 };
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const alloc = gpa.allocator();
     defer _ = gpa.deinit();
+
+    //
+
+    flag.init(alloc);
+    defer flag.deinit();
+
+    try flag.addMulti("do");
+
+    _ = try flag.parse(.single);
+
+    const do = flag.getMulti("do") orelse @as([]const string, &.{});
+
+    var rulestorun = std.ArrayList(Rule).init(alloc);
+    defer rulestorun.deinit();
+
+    if (do.len > 0) {
+        for (do) |item| {
+            const r = std.meta.stringToEnum(Rule, item) orelse std.debug.panic("invalid rule name passed to -do: {s}", .{item});
+            try rulestorun.append(r);
+        }
+    } else {
+        try rulestorun.appendSlice(std.enums.values(Rule));
+    }
+
+    //
 
     var dir = try std.fs.cwd().openDir("./", .{ .iterate = true });
     defer dir.close();
@@ -42,8 +76,8 @@ pub fn main() !void {
             .source = nulcont,
         };
 
-        inline for (linters) |ns| {
-            try ns.work(alloc2, item.path, &src, out);
+        for (rulestorun.items) |jtem| {
+            try linters[@enumToInt(jtem)](alloc2, item.path, &src, out);
         }
     }
 }
