@@ -26,13 +26,20 @@ pub fn main() !void {
     defer flag.deinit();
 
     try flag.addMulti("do");
+    try flag.addMulti("skip");
 
     _ = try flag.parse(.single);
 
     const do = flag.getMulti("do") orelse @as([]const string, &.{});
+    const skip = flag.getMulti("skip") orelse @as([]const string, &.{});
 
     var rulestorun = std.ArrayList(Rule).init(alloc);
     defer rulestorun.deinit();
+
+    if (do.len > 0 and skip.len > 0) {
+        std.log.err("-do and -skip are mutually exclusive", .{});
+        std.os.exit(1);
+    }
 
     if (do.len > 0) {
         for (do) |item| {
@@ -41,6 +48,13 @@ pub fn main() !void {
         }
     } else {
         try rulestorun.appendSlice(std.enums.values(Rule));
+
+        if (skip.len > 0) {
+            for (skip) |item| {
+                const r = std.meta.stringToEnum(Rule, item) orelse std.debug.panic("invalid rule name passed to -skip: {s}", .{item});
+                _ = removeItem(Rule, &rulestorun, r);
+            }
+        }
     }
 
     //
@@ -129,3 +143,10 @@ pub const Source = struct {
         return self._tokens.?;
     }
 };
+
+fn removeItem(comptime T: type, haystack: *std.ArrayList(T), needle: T) ?T {
+    for (haystack.items) |item, i| {
+        if (item == needle) return haystack.orderedRemove(i);
+    }
+    return null;
+}
