@@ -7,6 +7,7 @@ const linters = [_]fn (std.mem.Allocator, []const u8, *Source, std.fs.File.Write
     @import("./tools/dupe_import.zig").work,
     @import("./tools/todo.zig").work,
     @import("./tools/file_as_struct.zig").work,
+    @import("./tools/unused_decl.zig").work,
 };
 
 pub const WorkError = std.mem.Allocator.Error || std.fs.File.Writer.Error || error{};
@@ -15,6 +16,7 @@ const Rule = enum {
     dupe_import,
     todo,
     file_as_struct,
+    unused_decl,
 };
 
 pub fn main() !void {
