@@ -33,5 +33,24 @@ $ zigmod aq install 1/nektro/ziglint
 
 Want to propose more? Open an issue here on Github.
 
+## Using in Github Actions
+```yml
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v1
+        with:
+          version: "0.9.0"
+
+      - uses: nektro/actions-setup-zigmod@v1
+      - run: zigmod aq install 1/nektro/ziglint
+      - run: ~/.zigmod/bin/ziglint -skip todo
+```
+
 ## License
 MIT
