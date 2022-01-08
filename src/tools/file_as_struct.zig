@@ -5,7 +5,6 @@ pub fn work(alloc: std.mem.Allocator, file_name: []const u8, src: *main.Source, 
     //
     _ = alloc;
     _ = src;
-    _ = writer;
 
     const ast = try src.ast();
 
