@@ -39,11 +39,12 @@ fn checkNamespace(ast: std.zig.Ast, ns_node: NodeIndex, writer: std.fs.File.Writ
 
 fn checkNamespaceItem(ast: std.zig.Ast, ns_childs: []const NodeIndex, node: NodeIndex, writer: std.fs.File.Writer, file_name: string) CheckError!void {
     const tags = ast.nodes.items(.tag);
-    const main_tokens = ast.nodes.items(.main_token);
 
     switch (tags[node]) {
         .simple_var_decl => {
-            try searchForNameInNamespace(ast, main_tokens[node] + 1, ns_childs, node, writer, file_name);
+            const x = ast.simpleVarDecl(node);
+            if (x.visib_token) |_| return;
+            try searchForNameInNamespace(ast, x.ast.mut_token + 1, ns_childs, node, writer, file_name);
         },
 
         .fn_decl => {}, // TODO https://github.com/nektro/ziglint/issues/6
@@ -181,7 +182,6 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
 
         .simple_var_decl => {
             const x = ast.simpleVarDecl(node);
-            // x.visib_token; != null when pub
             const name = ast.tokenSlice(x.ast.mut_token + 1);
             if (std.mem.eql(u8, search_name, name)) return true;
             if (try checkValueForName(ast, search_name, x.ast.type_node, writer, file_name)) return true;
@@ -228,7 +228,7 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .container_decl, .container_decl_trailing => {
             const x = ast.containerDecl(node);
             if (try checkValuesForName(ast, search_name, x.ast.members, writer, file_name)) return true;
-            try checkNamespace(ast, node, writer, file_name); // TODO only do this if the simple_var_decl it comes from is not `pub`
+            try checkNamespace(ast, node, writer, file_name);
             return false;
         },
         .struct_init, .struct_init_comma => {

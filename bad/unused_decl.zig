@@ -10,6 +10,7 @@ pub fn main() void {
 
 const foo = struct {
     const bar = struct {};
+    pub const bam = enum { a };
 
     fn baz() void {
         _ = x;
