@@ -1,0 +1,26 @@
+name: False Negative
+description: A lint warning should have been raised, but was not.
+labels: ["bug", "false-"]
+body:
+  # - type: input
+  #   id: version
+  #   attributes:
+  #     label: Zig Version
+  #     description: "The output of `zig version`"
+  #     placeholder: "0.9.0-dev.1275+ac52e0056"
+  #   validations:
+  #     required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Code to Reproduce
+      description: What exactly can someone else do, in order to observe the problem that you observed?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Behavior
+      description: What error happened that you did not expect to see?
+    validations:
+      required: true

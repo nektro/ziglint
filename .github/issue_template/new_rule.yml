@@ -1,0 +1,26 @@
+name: New Rule
+description: Create a proposal for a new lint condition.
+labels: ["enhancement", "proposal"]
+body:
+  # - type: input
+  #   id: version
+  #   attributes:
+  #     label: Zig Version
+  #     description: "The output of `zig version`"
+  #     placeholder: "0.9.0-dev.1275+ac52e0056"
+  #   validations:
+  #     required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Code to Reproduce
+      description: What exactly can someone else do, in order to observe the problem that you observed?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Behavior
+      description: What error would you expect to happen?
+    validations:
+      required: true
