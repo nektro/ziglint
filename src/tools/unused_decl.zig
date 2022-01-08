@@ -152,6 +152,32 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
             return try checkValueForName(ast, search_name, data.rhs, writer, file_name);
         },
 
+        .@"if" => try checkAstValuesForName(ast, search_name, writer, file_name, ast.ifFull(node), &.{
+            .cond_expr,
+            .then_expr,
+            .else_expr,
+        }),
+        .while_simple => try checkAstValuesForName(ast, search_name, writer, file_name, ast.whileSimple(node), &.{
+            .cond_expr,
+            .cont_expr,
+            .then_expr,
+            .else_expr,
+        }),
+        .slice_sentinel => try checkAstValuesForName(ast, search_name, writer, file_name, ast.sliceSentinel(node), &.{
+            .sentinel,
+            .start,
+            .end,
+            .sentinel,
+        }),
+        .ptr_type_sentinel => try checkAstValuesForName(ast, search_name, writer, file_name, ast.ptrTypeSentinel(node), &.{
+            .align_node,
+            .addrspace_node,
+            .sentinel,
+            .bit_range_start,
+            .bit_range_end,
+            .child_type,
+        }),
+
         .simple_var_decl => {
             const x = ast.simpleVarDecl(node);
             // x.visib_token; != null when pub
@@ -212,39 +238,6 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
             if (try checkValuesForName(ast, search_name, x.ast.elements, writer, file_name)) return true;
             return false;
         },
-        .@"if" => {
-            const x = ast.ifFull(node);
-            if (try checkValueForName(ast, search_name, x.ast.cond_expr, writer, file_name)) return true;
-            if (try checkValueForName(ast, search_name, x.ast.then_expr, writer, file_name)) return true;
-            if (try checkValueForName(ast, search_name, x.ast.else_expr, writer, file_name)) return true;
-            return false;
-        },
-        .while_simple => {
-            const x = ast.whileSimple(node);
-            if (try checkValueForName(ast, search_name, x.ast.cond_expr, writer, file_name)) return true;
-            if (try checkValueForName(ast, search_name, x.ast.cont_expr, writer, file_name)) return true;
-            if (try checkValueForName(ast, search_name, x.ast.then_expr, writer, file_name)) return true;
-            if (try checkValueForName(ast, search_name, x.ast.else_expr, writer, file_name)) return true;
-            return false;
-        },
-        .slice_sentinel => {
-            const x = ast.sliceSentinel(node);
-            if (try checkValueForName(ast, search_name, x.ast.sentinel, writer, file_name)) return true;
-            if (try checkValueForName(ast, search_name, x.ast.start, writer, file_name)) return true;
-            if (try checkValueForName(ast, search_name, x.ast.end, writer, file_name)) return true;
-            if (try checkValueForName(ast, search_name, x.ast.sentinel, writer, file_name)) return true;
-            return false;
-        },
-        .ptr_type_sentinel => {
-            const x = ast.ptrTypeSentinel(node);
-            if (try checkValueForName(ast, search_name, x.ast.align_node, writer, file_name)) return true;
-            if (try checkValueForName(ast, search_name, x.ast.addrspace_node, writer, file_name)) return true;
-            if (try checkValueForName(ast, search_name, x.ast.sentinel, writer, file_name)) return true;
-            if (try checkValueForName(ast, search_name, x.ast.bit_range_start, writer, file_name)) return true;
-            if (try checkValueForName(ast, search_name, x.ast.bit_range_end, writer, file_name)) return true;
-            if (try checkValueForName(ast, search_name, x.ast.child_type, writer, file_name)) return true;
-            return false;
-        },
 
         else => @panic(@tagName(tags[node])),
     };
@@ -253,6 +246,13 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
 fn checkValuesForName(ast: std.zig.Ast, search_name: string, nodes: []const NodeIndex, writer: std.fs.File.Writer, file_name: string) CheckError!bool {
     for (nodes) |item| {
         if (try checkValueForName(ast, search_name, item, writer, file_name)) return true;
+    }
+    return false;
+}
+
+fn checkAstValuesForName(ast: std.zig.Ast, search_name: string, writer: std.fs.File.Writer, file_name: string, inner: anytype, comptime fields: []const std.meta.FieldEnum(@TypeOf(inner.ast))) CheckError!bool {
+    inline for (fields) |item| {
+        if (try checkValueForName(ast, search_name, @field(inner.ast, @tagName(item)), writer, file_name)) return true;
     }
     return false;
 }
