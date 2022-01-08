@@ -127,6 +127,7 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .sub,
         .assign_add,
         .@"break",
+        .error_union,
         => {
             if (try checkValueForName(ast, search_name, data.lhs, writer, file_name)) return true;
             if (try checkValueForName(ast, search_name, data.rhs, writer, file_name)) return true;
@@ -195,12 +196,16 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
             var params: [1]NodeIndex = undefined;
             const x = ast.fnProtoSimple(&params, node);
             if (try checkValuesForName(ast, search_name, x.ast.params, writer, file_name)) return true;
-            return false;
+            return try checkAstValuesForName(ast, search_name, writer, file_name, x, &.{
+                .return_type,
+            });
         },
         .fn_proto_multi => {
             const x = ast.fnProtoMulti(node);
             if (try checkValuesForName(ast, search_name, x.ast.params, writer, file_name)) return true;
-            return false;
+            return try checkAstValuesForName(ast, search_name, writer, file_name, x, &.{
+                .return_type,
+            });
         },
         .container_decl_two, .container_decl_two_trailing => {
             var buffer: [2]NodeIndex = undefined;
