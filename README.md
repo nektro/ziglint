@@ -24,6 +24,7 @@ $ zigmod aq install 1/nektro/ziglint
 # Available Rules
 - `dupe_import`: warn against duplicate `@import` calls with the same value
 - `todo`: list all `// TODO` comments
+- `file_as_struct`: checks for file name capitalization in the presence of top level fields
 
 Want to propose more? Open an issue here on Github.
 
