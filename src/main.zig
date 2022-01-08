@@ -29,11 +29,13 @@ pub fn main() !void {
 
     try flag.addMulti("do");
     try flag.addMulti("skip");
+    try flag.addMulti("file");
 
     _ = try flag.parse(.single);
 
     const do = flag.getMulti("do") orelse @as([]const string, &.{});
     const skip = flag.getMulti("skip") orelse @as([]const string, &.{});
+    const files = flag.getMulti("file");
 
     var rulestorun = std.ArrayList(Rule).init(alloc);
     defer rulestorun.deinit();
@@ -66,35 +68,45 @@ pub fn main() !void {
 
     const out = std.io.getStdOut().writer();
 
-    var walker = try dir.walk(alloc);
-    defer walker.deinit();
-    while (try walker.next()) |item| {
-        var arena = std.heap.ArenaAllocator.init(alloc);
-        const alloc2 = arena.allocator();
-        defer arena.deinit();
-
-        if (item.kind != .File) continue;
-        if (!std.mem.endsWith(u8, item.path, ".zig")) continue;
-        // TODO eventually do .gitignore parsing
-        if (std.mem.startsWith(u8, item.path, "zig-cache")) continue;
-        if (std.mem.startsWith(u8, item.path, ".zigmod")) continue;
-        if (std.mem.startsWith(u8, item.path, ".gyro")) continue;
-
-        const f = try dir.openFile(item.path, .{});
-        defer f.close();
-
-        const r = f.reader();
-        const content = try r.readAllAlloc(alloc2, 1 * 1024 * 1024 * 1024 * 4);
-        const nulcont = try negspan(alloc2, u8, content, 0);
-
-        var src = Source{
-            .alloc = alloc2,
-            .source = nulcont,
-        };
-
-        for (rulestorun.items) |jtem| {
-            try linters[@enumToInt(jtem)](alloc2, item.path, &src, out);
+    if (files) |_| {
+        for (files.?) |item| {
+            try doFile(alloc, dir, item, rulestorun.items, out);
         }
+    } else {
+        var walker = try dir.walk(alloc);
+        defer walker.deinit();
+        while (try walker.next()) |item| {
+            if (item.kind != .File) continue;
+            try doFile(alloc, dir, item.path, rulestorun.items, out);
+        }
+    }
+}
+
+fn doFile(alloc: std.mem.Allocator, dir: std.fs.Dir, path: string, rules: []const Rule, out: std.fs.File.Writer) !void {
+    var arena = std.heap.ArenaAllocator.init(alloc);
+    const alloc2 = arena.allocator();
+    defer arena.deinit();
+
+    if (!std.mem.endsWith(u8, path, ".zig")) return;
+    // TODO eventually do .gitignore parsing
+    if (std.mem.startsWith(u8, path, "zig-cache")) return;
+    if (std.mem.startsWith(u8, path, ".zigmod")) return;
+    if (std.mem.startsWith(u8, path, ".gyro")) return;
+
+    const f = try dir.openFile(path, .{});
+    defer f.close();
+
+    const r = f.reader();
+    const content = try r.readAllAlloc(alloc2, 1 * 1024 * 1024 * 1024 * 4);
+    const nulcont = try negspan(alloc2, u8, content, 0);
+
+    var src = Source{
+        .alloc = alloc2,
+        .source = nulcont,
+    };
+
+    for (rules) |jtem| {
+        try linters[@enumToInt(jtem)](alloc2, path, &src, out);
     }
 }
 
