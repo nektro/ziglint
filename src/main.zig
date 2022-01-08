@@ -6,6 +6,7 @@ const flag = @import("flag");
 const linters = [_]fn (std.mem.Allocator, []const u8, *Source, std.fs.File.Writer) WorkError!void{
     @import("./tools/dupe_import.zig").work,
     @import("./tools/todo.zig").work,
+    @import("./tools/file_as_struct.zig").work,
 };
 
 pub const WorkError = std.mem.Allocator.Error || std.fs.File.Writer.Error || error{};
@@ -13,6 +14,7 @@ pub const WorkError = std.mem.Allocator.Error || std.fs.File.Writer.Error || err
 const Rule = enum {
     dupe_import,
     todo,
+    file_as_struct,
 };
 
 pub fn main() !void {
@@ -126,6 +128,7 @@ pub const Source = struct {
     alloc: std.mem.Allocator,
     source: [:0]const u8,
     _tokens: ?[]const std.zig.Token = null,
+    _ast: ?std.zig.Ast = null,
 
     pub fn tokens(self: *Source) ![]const std.zig.Token {
         if (self._tokens) |_| {
@@ -141,6 +144,14 @@ pub const Source = struct {
         }
         self._tokens = list.toOwnedSlice();
         return self._tokens.?;
+    }
+
+    pub fn ast(self: *Source) !std.zig.Ast {
+        if (self._ast) |_| {
+            return self._ast.?;
+        }
+        self._ast = try std.zig.parse(self.alloc, self.source);
+        return self._ast.?;
     }
 };
 
