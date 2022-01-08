@@ -21,6 +21,11 @@ This requires having [Zig](https://ziglang.org) and [Zigmod](https://github.com/
 $ zigmod aq install 1/nektro/ziglint
 ```
 
+## Built With
+- Zig master `0.9.0`
+- [Zigmod](https://github.com/nektro/zigmod) package manager
+- See [`zig.mod`](./zig.mod)
+
 # Available Rules
 - `dupe_import`: warn against duplicate `@import` calls with the same value
 - `todo`: list all `// TODO` comments
