@@ -153,8 +153,6 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .@"try",
         .bool_not,
         .@"return",
-        .@"switch",
-        .switch_comma,
         .grouped_expression,
         .@"usingnamespace",
         .@"comptime",
@@ -288,6 +286,13 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
             const x = ast.containerDecl(node);
             if (try checkValuesForName(ast, search_name, x.ast.members, writer, file_name)) return true;
             try checkNamespace(ast, node, writer, file_name);
+            return false;
+        },
+        .@"switch", .switch_comma => {
+            const extra = ast.extraData(data.rhs, std.zig.Ast.Node.SubRange);
+            const cases = ast.extra_data[extra.start..extra.end];
+            if (try checkValueForName(ast, search_name, data.lhs, writer, file_name)) return true;
+            if (try checkValuesForName(ast, search_name, cases, writer, file_name)) return true;
             return false;
         },
 
