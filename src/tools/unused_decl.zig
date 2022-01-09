@@ -112,6 +112,7 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .@"catch",
         .container_field_init,
         .struct_init_dot_two,
+        .struct_init_dot_two_comma,
         .struct_init_one,
         .struct_init_one_comma,
         .array_init_dot_two,
@@ -139,6 +140,8 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .mod,
         .switch_case_one,
         .assign_bit_or,
+        .array_init_one,
+        .array_init_one_comma,
         => {
             if (try checkValueForName(ast, search_name, data.lhs, writer, file_name)) return true;
             if (try checkValueForName(ast, search_name, data.rhs, writer, file_name)) return true;
@@ -212,6 +215,10 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .struct_init, .struct_init_comma =>         try checkAstParentOpForName(ast, search_name, writer, file_name, ast.structInit(node), .type_expr, .fields),
         .array_init, .array_init_comma =>           try checkAstParentOpForName(ast, search_name, writer, file_name, ast.arrayInit(node), .type_expr, .elements),
         .call, .call_comma =>                       try checkAstParentOpForName(ast, search_name, writer, file_name, ast.callFull(node), .fn_expr, .params),
+        .array_init_dot, .array_init_dot_comma =>   try checkAstParentOpForName(ast, search_name, writer, file_name, ast.arrayInitDot(node), .type_expr, .elements),
+        .struct_init_dot, .struct_init_dot_comma => try checkAstParentOpForName(ast, search_name, writer, file_name, ast.structInitDot(node), .type_expr, .fields),
+        .switch_case =>                             try checkAstParentOpForName(ast, search_name, writer, file_name, ast.switchCase(node), .target_expr, .values),
+        .tagged_union =>                            try checkAstParentOpForName(ast, search_name, writer, file_name, ast.taggedUnion(node), .arg, .members),
         // zig fmt: on
 
         .simple_var_decl => {
@@ -294,6 +301,11 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
             if (try checkValueForName(ast, search_name, data.lhs, writer, file_name)) return true;
             if (try checkValuesForName(ast, search_name, cases, writer, file_name)) return true;
             return false;
+        },
+        .tagged_union_two, .tagged_union_two_trailing => {
+            var params: [2]NodeIndex = undefined;
+            const x = ast.taggedUnionTwo(&params, node);
+            return try checkAstParentOpForName(ast, search_name, writer, file_name, x, .arg, .members);
         },
 
         else => @panic(@tagName(tags[node])), // primary
