@@ -33,11 +33,11 @@ fn checkNamespace(ast: std.zig.Ast, ns_node: NodeIndex, writer: std.fs.File.Writ
     };
 
     for (childs) |item| {
-        try checkNamespaceItem(ast, childs, item, writer, file_name);
+        try checkNamespaceItem(ast, childs, item, writer, file_name, ns_node);
     }
 }
 
-fn checkNamespaceItem(ast: std.zig.Ast, ns_childs: []const NodeIndex, node: NodeIndex, writer: std.fs.File.Writer, file_name: string) CheckError!void {
+fn checkNamespaceItem(ast: std.zig.Ast, ns_childs: []const NodeIndex, node: NodeIndex, writer: std.fs.File.Writer, file_name: string, owner: NodeIndex) CheckError!void {
     const tags = ast.nodes.items(.tag);
 
     switch (tags[node]) {
@@ -57,7 +57,10 @@ fn checkNamespaceItem(ast: std.zig.Ast, ns_childs: []const NodeIndex, node: Node
         .test_decl,
         => {},
 
-        else => @panic(@tagName(tags[node])), // decl
+        else => {
+            std.log.warn("{s} has a {s} child", .{ @tagName(tags[owner]), @tagName(tags[node]) });
+            @panic(@tagName(tags[node])); // decl
+        },
     }
 }
 
