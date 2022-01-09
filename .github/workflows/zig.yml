@@ -1,4 +1,4 @@
-name: Zig CI
+name: CI
 
 on:
   push:
