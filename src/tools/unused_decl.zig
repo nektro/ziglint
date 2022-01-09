@@ -29,7 +29,7 @@ fn checkNamespace(ast: std.zig.Ast, ns_node: NodeIndex, writer: std.fs.File.Writ
             break :blk x.ast.members;
         },
 
-        else => @panic(@tagName(tags[ns_node])),
+        else => @panic(@tagName(tags[ns_node])), // namespace
     };
 
     for (childs) |item| {
@@ -57,7 +57,7 @@ fn checkNamespaceItem(ast: std.zig.Ast, ns_childs: []const NodeIndex, node: Node
         .test_decl,
         => {},
 
-        else => @panic(@tagName(tags[node])),
+        else => @panic(@tagName(tags[node])), // decl
     }
 }
 
@@ -288,7 +288,7 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
             return false;
         },
 
-        else => @panic(@tagName(tags[node])),
+        else => @panic(@tagName(tags[node])), // primary
     };
 }
 
