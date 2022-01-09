@@ -161,9 +161,7 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         }),
         .while_simple => try checkAstValuesForName(ast, search_name, writer, file_name, ast.whileSimple(node), &.{
             .cond_expr,
-            .cont_expr,
             .then_expr,
-            .else_expr,
         }),
         .slice_sentinel => try checkAstValuesForName(ast, search_name, writer, file_name, ast.sliceSentinel(node), &.{
             .sentinel,
