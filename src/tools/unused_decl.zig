@@ -90,6 +90,9 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .error_set_decl,
         .@"continue",
         .error_value,
+        .unreachable_literal,
+        .float_literal,
+        .multiline_string_literal,
         => false,
 
         .builtin_call_two,
@@ -130,6 +133,12 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .shl,
         .less_or_equal,
         .assign_sub,
+        .div,
+        .assign_div,
+        .assign_mul,
+        .mod,
+        .switch_case_one,
+        .assign_bit_or,
         => {
             if (try checkValueForName(ast, search_name, data.lhs, writer, file_name)) return true;
             if (try checkValueForName(ast, search_name, data.rhs, writer, file_name)) return true;
@@ -149,6 +158,7 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .grouped_expression,
         .@"usingnamespace",
         .@"comptime",
+        .negation,
         => {
             return try checkValueForName(ast, search_name, data.lhs, writer, file_name);
         },
@@ -193,6 +203,11 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
             .cont_expr,
             .then_expr,
             .else_expr,
+        }),
+        .array_type_sentinel => try checkAstValuesForName(ast, search_name, writer, file_name, ast.arrayTypeSentinel(node), &.{
+            .elem_count,
+            .sentinel,
+            .elem_type,
         }),
 
         .simple_var_decl => {
