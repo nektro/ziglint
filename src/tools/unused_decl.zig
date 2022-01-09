@@ -124,7 +124,6 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .bang_equal,
         .sub,
         .assign_add,
-        .@"break",
         .error_union,
         .mul,
         .less_than,
@@ -167,6 +166,7 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .@"defer",
         .test_decl,
         .@"errdefer",
+        .@"break",
         => {
             return try checkValueForName(ast, search_name, data.rhs, writer, file_name, node);
         },
