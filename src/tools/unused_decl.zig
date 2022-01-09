@@ -65,20 +65,20 @@ fn searchForNameInNamespace(ast: std.zig.Ast, name_node: NodeIndex, ns_childs: [
     const name = ast.tokenSlice(name_node);
     for (ns_childs) |item| {
         if (item == self) continue; // definition doesn't count as a use
-        if (try checkValueForName(ast, name, item, writer, file_name)) return;
+        if (try checkValueForName(ast, name, item, writer, file_name, self)) return;
     }
     const loc = ast.tokenLocation(0, name_node);
     try writer.print("./{s}:{d}:{d}: unused local declaration '{s}'\n", .{ file_name, loc.line + 1, loc.column + 1, name });
-    _ = file_name;
-    _ = writer;
-    _ = loc;
 }
 
-fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, writer: std.fs.File.Writer, file_name: string) CheckError!bool {
+fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, writer: std.fs.File.Writer, file_name: string, owner: NodeIndex) CheckError!bool {
     if (node == 0) return false;
     const tags = ast.nodes.items(.tag);
-    const data = ast.nodes.items(.data)[node];
+    const datas = ast.nodes.items(.data);
     const main_tokens = ast.nodes.items(.main_token);
+
+    if (node >= datas.len) std.debug.panic("owner node '{s}' indexed {d} out of bounds on slice of length {d}", .{ @tagName(tags[owner]), node, datas.len });
+    const data = datas[node];
 
     return switch (tags[node]) {
         .root => unreachable, // handled above by skipping node 0
@@ -143,8 +143,8 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .array_init_one,
         .array_init_one_comma,
         => {
-            if (try checkValueForName(ast, search_name, data.lhs, writer, file_name)) return true;
-            if (try checkValueForName(ast, search_name, data.rhs, writer, file_name)) return true;
+            if (try checkValueForName(ast, search_name, data.lhs, writer, file_name, node)) return true;
+            if (try checkValueForName(ast, search_name, data.rhs, writer, file_name, node)) return true;
             return false;
         },
 
@@ -161,37 +161,37 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .@"comptime",
         .negation,
         => {
-            return try checkValueForName(ast, search_name, data.lhs, writer, file_name);
+            return try checkValueForName(ast, search_name, data.lhs, writer, file_name, node);
         },
 
         .@"defer",
         .test_decl,
         .@"errdefer",
         => {
-            return try checkValueForName(ast, search_name, data.rhs, writer, file_name);
+            return try checkValueForName(ast, search_name, data.rhs, writer, file_name, node);
         },
 
-        .@"if" => try checkAstValuesForName(ast, search_name, writer, file_name, ast.ifFull(node), &.{
+        .@"if" => try checkAstValuesForName(ast, search_name, writer, file_name, node, ast.ifFull(node), &.{
             .cond_expr,
             .then_expr,
             .else_expr,
         }),
-        .while_simple => try checkAstValuesForName(ast, search_name, writer, file_name, ast.whileSimple(node), &.{
+        .while_simple => try checkAstValuesForName(ast, search_name, writer, file_name, node, ast.whileSimple(node), &.{
             .cond_expr,
             .then_expr,
         }),
-        .slice => try checkAstValuesForName(ast, search_name, writer, file_name, ast.slice(node), &.{
+        .slice => try checkAstValuesForName(ast, search_name, writer, file_name, node, ast.slice(node), &.{
             .sliced,
             .start,
             .end,
         }),
-        .slice_sentinel => try checkAstValuesForName(ast, search_name, writer, file_name, ast.sliceSentinel(node), &.{
+        .slice_sentinel => try checkAstValuesForName(ast, search_name, writer, file_name, node, ast.sliceSentinel(node), &.{
             .sliced,
             .start,
             .end,
             .sentinel,
         }),
-        .ptr_type_sentinel => try checkAstValuesForName(ast, search_name, writer, file_name, ast.ptrTypeSentinel(node), &.{
+        .ptr_type_sentinel => try checkAstValuesForName(ast, search_name, writer, file_name, node, ast.ptrTypeSentinel(node), &.{
             .align_node,
             .addrspace_node,
             .sentinel,
@@ -199,34 +199,34 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
             .bit_range_end,
             .child_type,
         }),
-        .while_cont => try checkAstValuesForName(ast, search_name, writer, file_name, ast.whileCont(node), &.{
+        .while_cont => try checkAstValuesForName(ast, search_name, writer, file_name, node, ast.whileCont(node), &.{
             .cond_expr,
             .cont_expr,
             .then_expr,
             .else_expr,
         }),
-        .array_type_sentinel => try checkAstValuesForName(ast, search_name, writer, file_name, ast.arrayTypeSentinel(node), &.{
+        .array_type_sentinel => try checkAstValuesForName(ast, search_name, writer, file_name, node, ast.arrayTypeSentinel(node), &.{
             .elem_count,
             .sentinel,
             .elem_type,
         }),
 
         // zig fmt: off
-        .struct_init, .struct_init_comma =>         try checkAstParentOpForName(ast, search_name, writer, file_name, ast.structInit(node), .type_expr, .fields),
-        .array_init, .array_init_comma =>           try checkAstParentOpForName(ast, search_name, writer, file_name, ast.arrayInit(node), .type_expr, .elements),
-        .call, .call_comma =>                       try checkAstParentOpForName(ast, search_name, writer, file_name, ast.callFull(node), .fn_expr, .params),
-        .array_init_dot, .array_init_dot_comma =>   try checkAstParentOpForName(ast, search_name, writer, file_name, ast.arrayInitDot(node), .type_expr, .elements),
-        .struct_init_dot, .struct_init_dot_comma => try checkAstParentOpForName(ast, search_name, writer, file_name, ast.structInitDot(node), .type_expr, .fields),
-        .switch_case =>                             try checkAstParentOpForName(ast, search_name, writer, file_name, ast.switchCase(node), .target_expr, .values),
-        .tagged_union =>                            try checkAstParentOpForName(ast, search_name, writer, file_name, ast.taggedUnion(node), .arg, .members),
+        .struct_init, .struct_init_comma =>         try checkAstParentOpForName(ast, search_name, writer, file_name, node, ast.structInit(node), .type_expr, .fields),
+        .array_init, .array_init_comma =>           try checkAstParentOpForName(ast, search_name, writer, file_name, node, ast.arrayInit(node), .type_expr, .elements),
+        .call, .call_comma =>                       try checkAstParentOpForName(ast, search_name, writer, file_name, node, ast.callFull(node), .fn_expr, .params),
+        .array_init_dot, .array_init_dot_comma =>   try checkAstParentOpForName(ast, search_name, writer, file_name, node, ast.arrayInitDot(node), .type_expr, .elements),
+        .struct_init_dot, .struct_init_dot_comma => try checkAstParentOpForName(ast, search_name, writer, file_name, node, ast.structInitDot(node), .type_expr, .fields),
+        .switch_case =>                             try checkAstParentOpForName(ast, search_name, writer, file_name, node, ast.switchCase(node), .target_expr, .values),
+        .tagged_union =>                            try checkAstParentOpForName(ast, search_name, writer, file_name, node, ast.taggedUnion(node), .arg, .members),
         // zig fmt: on
 
         .simple_var_decl => {
             const x = ast.simpleVarDecl(node);
             const name = ast.tokenSlice(x.ast.mut_token + 1);
             if (std.mem.eql(u8, search_name, name)) return true;
-            if (try checkValueForName(ast, search_name, x.ast.type_node, writer, file_name)) return true;
-            if (try checkValueForName(ast, search_name, x.ast.init_node, writer, file_name)) return true;
+            if (try checkValueForName(ast, search_name, x.ast.type_node, writer, file_name, node)) return true;
+            if (try checkValueForName(ast, search_name, x.ast.init_node, writer, file_name, node)) return true;
             return false;
         },
         .identifier => {
@@ -236,8 +236,8 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .fn_proto_simple => {
             var params: [1]NodeIndex = undefined;
             const x = ast.fnProtoSimple(&params, node);
-            if (try checkValuesForName(ast, search_name, x.ast.params, writer, file_name)) return true;
-            return try checkAstValuesForName(ast, search_name, writer, file_name, x, &.{
+            if (try checkValuesForName(ast, search_name, x.ast.params, writer, file_name, node)) return true;
+            return try checkAstValuesForName(ast, search_name, writer, file_name, node, x, &.{
                 // .proto_node, // TODO enabling this causes a successful compile but the app to immediately segfault during startup
                 .return_type,
                 .align_expr,
@@ -248,8 +248,8 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         },
         .fn_proto_multi => {
             const x = ast.fnProtoMulti(node);
-            if (try checkValuesForName(ast, search_name, x.ast.params, writer, file_name)) return true;
-            return try checkAstValuesForName(ast, search_name, writer, file_name, x, &.{
+            if (try checkValuesForName(ast, search_name, x.ast.params, writer, file_name, node)) return true;
+            return try checkAstValuesForName(ast, search_name, writer, file_name, node, x, &.{
                 // .proto_node, // TODO enabling this causes a successful compile but the app to immediately segfault during startup
                 .return_type,
                 .align_expr,
@@ -261,8 +261,8 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .fn_proto_one => {
             var params: [1]NodeIndex = undefined;
             const x = ast.fnProtoOne(&params, node);
-            if (try checkValuesForName(ast, search_name, x.ast.params, writer, file_name)) return true;
-            return try checkAstValuesForName(ast, search_name, writer, file_name, x, &.{
+            if (try checkValuesForName(ast, search_name, x.ast.params, writer, file_name, node)) return true;
+            return try checkAstValuesForName(ast, search_name, writer, file_name, node, x, &.{
                 // .proto_node, // TODO enabling this causes a successful compile but the app to immediately segfault during startup
                 .return_type,
                 .align_expr,
@@ -274,60 +274,60 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .container_decl_two, .container_decl_two_trailing => {
             var buffer: [2]NodeIndex = undefined;
             const x = ast.containerDeclTwo(&buffer, node);
-            if (try checkValuesForName(ast, search_name, x.ast.members, writer, file_name)) return true;
+            if (try checkValuesForName(ast, search_name, x.ast.members, writer, file_name, node)) return true;
             try checkNamespace(ast, node, writer, file_name);
             return false;
         },
         .block, .block_semicolon => {
             const statements = ast.extra_data[data.lhs..data.rhs];
-            if (try checkValuesForName(ast, search_name, statements, writer, file_name)) return true;
+            if (try checkValuesForName(ast, search_name, statements, writer, file_name, node)) return true;
             return false;
         },
         .if_simple => {
-            if (try checkValueForName(ast, search_name, data.lhs, writer, file_name)) return true;
-            if (try checkValueForName(ast, search_name, data.rhs, writer, file_name)) return true;
+            if (try checkValueForName(ast, search_name, data.lhs, writer, file_name, node)) return true;
+            if (try checkValueForName(ast, search_name, data.rhs, writer, file_name, node)) return true;
             if (std.mem.eql(u8, search_name, ast.tokenSlice(main_tokens[node]))) return true;
             return false;
         },
         .container_decl, .container_decl_trailing => {
             const x = ast.containerDecl(node);
-            if (try checkValuesForName(ast, search_name, x.ast.members, writer, file_name)) return true;
+            if (try checkValuesForName(ast, search_name, x.ast.members, writer, file_name, node)) return true;
             try checkNamespace(ast, node, writer, file_name);
             return false;
         },
         .@"switch", .switch_comma => {
             const extra = ast.extraData(data.rhs, std.zig.Ast.Node.SubRange);
             const cases = ast.extra_data[extra.start..extra.end];
-            if (try checkValueForName(ast, search_name, data.lhs, writer, file_name)) return true;
-            if (try checkValuesForName(ast, search_name, cases, writer, file_name)) return true;
+            if (try checkValueForName(ast, search_name, data.lhs, writer, file_name, node)) return true;
+            if (try checkValuesForName(ast, search_name, cases, writer, file_name, node)) return true;
             return false;
         },
         .tagged_union_two, .tagged_union_two_trailing => {
             var params: [2]NodeIndex = undefined;
             const x = ast.taggedUnionTwo(&params, node);
-            return try checkAstParentOpForName(ast, search_name, writer, file_name, x, .arg, .members);
+            return try checkAstParentOpForName(ast, search_name, writer, file_name, node, x, .arg, .members);
         },
 
         else => @panic(@tagName(tags[node])), // primary
     };
 }
 
-fn checkValuesForName(ast: std.zig.Ast, search_name: string, nodes: []const NodeIndex, writer: std.fs.File.Writer, file_name: string) CheckError!bool {
+fn checkValuesForName(ast: std.zig.Ast, search_name: string, nodes: []const NodeIndex, writer: std.fs.File.Writer, file_name: string, owner: NodeIndex) CheckError!bool {
     for (nodes) |item| {
-        if (try checkValueForName(ast, search_name, item, writer, file_name)) return true;
+        if (try checkValueForName(ast, search_name, item, writer, file_name, owner)) return true;
     }
     return false;
 }
 
-fn checkAstValuesForName(ast: std.zig.Ast, search_name: string, writer: std.fs.File.Writer, file_name: string, inner: anytype, comptime fields: []const std.meta.FieldEnum(@TypeOf(inner.ast))) CheckError!bool {
+fn checkAstValuesForName(ast: std.zig.Ast, search_name: string, writer: std.fs.File.Writer, file_name: string, owner: NodeIndex, inner: anytype, comptime fields: []const std.meta.FieldEnum(@TypeOf(inner.ast))) CheckError!bool {
     inline for (fields) |item| {
-        if (try checkValueForName(ast, search_name, @field(inner.ast, @tagName(item)), writer, file_name)) return true;
+        if (try checkValueForName(ast, search_name, @field(inner.ast, @tagName(item)), writer, file_name, owner)) return true;
     }
     return false;
 }
 
-fn checkAstParentOpForName(ast: std.zig.Ast, search_name: string, writer: std.fs.File.Writer, file_name: string, inner: anytype, comptime parent: std.meta.FieldEnum(@TypeOf(inner.ast)), comptime childs: @TypeOf(parent)) CheckError!bool {
-    if (try checkValueForName(ast, search_name, @field(inner.ast, @tagName(parent)), writer, file_name)) return true;
-    if (try checkValuesForName(ast, search_name, @field(inner.ast, @tagName(childs)), writer, file_name)) return true;
+fn checkAstParentOpForName(ast: std.zig.Ast, search_name: string, writer: std.fs.File.Writer, file_name: string, owner: NodeIndex, inner: anytype, comptime parent: std.meta.FieldEnum(@TypeOf(inner.ast)), comptime childs: @TypeOf(parent)) CheckError!bool {
+    if (try checkValueForName(ast, search_name, @field(inner.ast, @tagName(parent)), writer, file_name, owner)) return true;
+    if (try checkValuesForName(ast, search_name, @field(inner.ast, @tagName(childs)), writer, file_name, owner)) return true;
     return false;
 }
