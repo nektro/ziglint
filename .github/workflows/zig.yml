@@ -25,3 +25,4 @@ jobs:
       - run: zigmod ci
       - run: zig build
       - run: ./zig-out/bin/ziglint -skip todo
+      - run: ./zig-out/bin/ziglint -do todo
