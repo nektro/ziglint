@@ -96,6 +96,9 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .unreachable_literal,
         .float_literal,
         .multiline_string_literal,
+        .asm_output,
+        .@"anytype",
+        .anyframe_literal,
         => false,
 
         .builtin_call_two,
@@ -108,6 +111,9 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .ptr_type_aligned,
         .for_simple,
         .call_one,
+        .call_one_comma,
+        .async_call_one,
+        .async_call_one_comma,
         .array_cat,
         .bool_or,
         .bool_and,
@@ -144,6 +150,32 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .assign_bit_or,
         .array_init_one,
         .array_init_one_comma,
+        .array_mult,
+        .bit_or,
+        .bit_and,
+        .assign_add_wrap,
+        .bit_xor,
+        .shr,
+        .switch_range,
+        .container_field_align,
+        .assign_mod,
+        .assign_shl,
+        .assign_shl_sat,
+        .assign_shr,
+        .assign_bit_and,
+        .assign_bit_xor,
+        .assign_mul_wrap,
+        .assign_sub_wrap,
+        .assign_mul_sat,
+        .assign_add_sat,
+        .assign_sub_sat,
+        .mul_wrap,
+        .mul_sat,
+        .add_wrap,
+        .sub_wrap,
+        .add_sat,
+        .sub_sat,
+        .shl_sat,
         => {
             if (try checkValueForName(ast, search_name, data.lhs, writer, file_name, node)) return true;
             if (try checkValueForName(ast, search_name, data.rhs, writer, file_name, node)) return true;
@@ -162,6 +194,14 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .@"usingnamespace",
         .@"comptime",
         .negation,
+        .asm_input,
+        .bit_not,
+        .@"await",
+        .negation_wrap,
+        .asm_simple,
+        .@"suspend",
+        .@"resume",
+        .@"nosuspend",
         => {
             return try checkValueForName(ast, search_name, data.lhs, writer, file_name, node);
         },
@@ -170,6 +210,7 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .test_decl,
         .@"errdefer",
         .@"break",
+        .anyframe_type,
         => {
             return try checkValueForName(ast, search_name, data.rhs, writer, file_name, node);
         },
@@ -198,6 +239,20 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
             .sentinel,
             .child_type,
         }),
+        .ptr_type => try checkAstValuesForName(ast, search_name, writer, file_name, node, ast.ptrType(node), &.{
+            .align_node,
+            .addrspace_node,
+            .sentinel,
+            .child_type,
+        }),
+        .ptr_type_bit_range => try checkAstValuesForName(ast, search_name, writer, file_name, node, ast.ptrTypeBitRange(node), &.{
+            .align_node,
+            .addrspace_node,
+            .sentinel,
+            .bit_range_start,
+            .bit_range_end,
+            .child_type,
+        }),
         .while_cont => try checkAstValuesForName(ast, search_name, writer, file_name, node, ast.whileCont(node), &.{
             .cond_expr,
             .cont_expr,
@@ -208,19 +263,63 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
             .sentinel,
             .elem_type,
         }),
+        .@"for" => try checkAstValuesForName(ast, search_name, writer, file_name, node, ast.forFull(node), &.{
+            .cond_expr,
+            .then_expr,
+            .else_expr,
+        }),
+        .@"while" => try checkAstValuesForName(ast, search_name, writer, file_name, node, ast.whileFull(node), &.{
+            .cond_expr,
+            .cont_expr,
+            .then_expr,
+            .else_expr,
+        }),
+        .container_field => try checkAstValuesForName(ast, search_name, writer, file_name, node, ast.containerField(node), &.{
+            .type_expr,
+            .value_expr,
+            .align_expr,
+        }),
 
         // zig fmt: off
         .struct_init, .struct_init_comma =>         try checkAstParentOpForName(ast, search_name, writer, file_name, node, ast.structInit(node), .type_expr, .fields),
         .array_init, .array_init_comma =>           try checkAstParentOpForName(ast, search_name, writer, file_name, node, ast.arrayInit(node), .type_expr, .elements),
         .call, .call_comma =>                       try checkAstParentOpForName(ast, search_name, writer, file_name, node, ast.callFull(node), .fn_expr, .params),
+        .async_call, .async_call_comma =>           try checkAstParentOpForName(ast, search_name, writer, file_name, node, ast.callFull(node), .fn_expr, .params),
         .array_init_dot, .array_init_dot_comma =>   try checkAstParentOpForName(ast, search_name, writer, file_name, node, ast.arrayInitDot(node), .type_expr, .elements),
         .struct_init_dot, .struct_init_dot_comma => try checkAstParentOpForName(ast, search_name, writer, file_name, node, ast.structInitDot(node), .type_expr, .fields),
         .switch_case =>                             try checkAstParentOpForName(ast, search_name, writer, file_name, node, ast.switchCase(node), .target_expr, .values),
-        .tagged_union =>                            try checkAstParentOpForName(ast, search_name, writer, file_name, node, ast.taggedUnion(node), .arg, .members),
+        .tagged_union, .tagged_union_trailing =>    try checkAstParentOpForName(ast, search_name, writer, file_name, node, ast.taggedUnion(node), .arg, .members),
+        .@"asm" =>                                  try checkAstParentOpForName(ast, search_name, writer, file_name, node, ast.asmFull(node), .template, .items),
+        .container_decl_arg, .container_decl_arg_trailing => try checkAstParentOpForName(ast, search_name, writer, file_name, node, ast.containerDeclArg(node), .arg, .members),
+        .tagged_union_enum_tag, .tagged_union_enum_tag_trailing => try checkAstParentOpForName(ast, search_name, writer, file_name, node, ast.taggedUnionEnumTag(node), .arg, .members),
         // zig fmt: on
 
         .simple_var_decl => {
             const x = ast.simpleVarDecl(node);
+            const name = ast.tokenSlice(x.ast.mut_token + 1);
+            if (std.mem.eql(u8, search_name, name)) return true;
+            if (try checkValueForName(ast, search_name, x.ast.type_node, writer, file_name, node)) return true;
+            if (try checkValueForName(ast, search_name, x.ast.init_node, writer, file_name, node)) return true;
+            return false;
+        },
+        .local_var_decl => {
+            const x = ast.localVarDecl(node);
+            const name = ast.tokenSlice(x.ast.mut_token + 1);
+            if (std.mem.eql(u8, search_name, name)) return true;
+            if (try checkValueForName(ast, search_name, x.ast.type_node, writer, file_name, node)) return true;
+            if (try checkValueForName(ast, search_name, x.ast.init_node, writer, file_name, node)) return true;
+            return false;
+        },
+        .aligned_var_decl => {
+            const x = ast.alignedVarDecl(node);
+            const name = ast.tokenSlice(x.ast.mut_token + 1);
+            if (std.mem.eql(u8, search_name, name)) return true;
+            if (try checkValueForName(ast, search_name, x.ast.type_node, writer, file_name, node)) return true;
+            if (try checkValueForName(ast, search_name, x.ast.init_node, writer, file_name, node)) return true;
+            return false;
+        },
+        .global_var_decl => {
+            const x = ast.globalVarDecl(node);
             const name = ast.tokenSlice(x.ast.mut_token + 1);
             if (std.mem.eql(u8, search_name, name)) return true;
             if (try checkValueForName(ast, search_name, x.ast.type_node, writer, file_name, node)) return true;
@@ -249,6 +348,17 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .fn_proto_one => {
             var params: [1]NodeIndex = undefined;
             const x = ast.fnProtoOne(&params, node);
+            if (try checkValuesForName(ast, search_name, x.ast.params, writer, file_name, node)) return true;
+            return try checkAstValuesForName(ast, search_name, writer, file_name, node, x, &.{
+                .return_type,
+                .align_expr,
+                .addrspace_expr,
+                .section_expr,
+                .callconv_expr,
+            });
+        },
+        .fn_proto => {
+            const x = ast.fnProto(node);
             if (try checkValuesForName(ast, search_name, x.ast.params, writer, file_name, node)) return true;
             return try checkAstValuesForName(ast, search_name, writer, file_name, node, x, &.{
                 .return_type,
@@ -295,7 +405,10 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
             return try checkAstParentOpForName(ast, search_name, writer, file_name, node, x, .arg, .members);
         },
 
-        else => @panic(@tagName(tags[node])), // primary
+        .builtin_call, .builtin_call_comma => {
+            const nodes = ast.extra_data[data.lhs..data.rhs];
+            return try checkValuesForName(ast, search_name, nodes, writer, file_name, node);
+        },
     };
 }
 
