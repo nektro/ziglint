@@ -97,6 +97,7 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .enum_literal,
         .error_set_decl,
         .@"continue",
+        .error_value,
         => false,
 
         .builtin_call_two,
@@ -129,6 +130,14 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .assign_add,
         .@"break",
         .error_union,
+        .mul,
+        .less_than,
+        .add,
+        .greater_or_equal,
+        .slice_open,
+        .shl,
+        .less_or_equal,
+        .assign_sub,
         => {
             if (try checkValueForName(ast, search_name, data.lhs, writer, file_name)) return true;
             if (try checkValueForName(ast, search_name, data.rhs, writer, file_name)) return true;
@@ -146,11 +155,17 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .@"return",
         .@"switch",
         .switch_comma,
+        .grouped_expression,
+        .@"usingnamespace",
+        .@"comptime",
         => {
             return try checkValueForName(ast, search_name, data.lhs, writer, file_name);
         },
 
-        .@"defer" => {
+        .@"defer",
+        .test_decl,
+        .@"errdefer",
+        => {
             return try checkValueForName(ast, search_name, data.rhs, writer, file_name);
         },
 
@@ -162,6 +177,11 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .while_simple => try checkAstValuesForName(ast, search_name, writer, file_name, ast.whileSimple(node), &.{
             .cond_expr,
             .then_expr,
+        }),
+        .slice => try checkAstValuesForName(ast, search_name, writer, file_name, ast.slice(node), &.{
+            .sliced,
+            .start,
+            .end,
         }),
         .slice_sentinel => try checkAstValuesForName(ast, search_name, writer, file_name, ast.sliceSentinel(node), &.{
             .sliced,
@@ -176,6 +196,12 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
             .bit_range_start,
             .bit_range_end,
             .child_type,
+        }),
+        .while_cont => try checkAstValuesForName(ast, search_name, writer, file_name, ast.whileCont(node), &.{
+            .cond_expr,
+            .cont_expr,
+            .then_expr,
+            .else_expr,
         }),
 
         .simple_var_decl => {
@@ -205,6 +231,19 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         },
         .fn_proto_multi => {
             const x = ast.fnProtoMulti(node);
+            if (try checkValuesForName(ast, search_name, x.ast.params, writer, file_name)) return true;
+            return try checkAstValuesForName(ast, search_name, writer, file_name, x, &.{
+                // .proto_node, // TODO enabling this causes a successful compile but the app to immediately segfault during startup
+                .return_type,
+                .align_expr,
+                .addrspace_expr,
+                .section_expr,
+                .callconv_expr,
+            });
+        },
+        .fn_proto_one => {
+            var params: [1]NodeIndex = undefined;
+            const x = ast.fnProtoOne(&params, node);
             if (try checkValuesForName(ast, search_name, x.ast.params, writer, file_name)) return true;
             return try checkAstValuesForName(ast, search_name, writer, file_name, x, &.{
                 // .proto_node, // TODO enabling this causes a successful compile but the app to immediately segfault during startup
