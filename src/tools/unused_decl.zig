@@ -210,6 +210,12 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
             .elem_type,
         }),
 
+        // zig fmt: off
+        .struct_init, .struct_init_comma =>         try checkAstParentOpForName(ast, search_name, writer, file_name, ast.structInit(node), .type_expr, .fields),
+        .array_init, .array_init_comma =>           try checkAstParentOpForName(ast, search_name, writer, file_name, ast.arrayInit(node), .type_expr, .elements),
+        .call, .call_comma =>                       try checkAstParentOpForName(ast, search_name, writer, file_name, ast.callFull(node), .fn_expr, .params),
+        // zig fmt: on
+
         .simple_var_decl => {
             const x = ast.simpleVarDecl(node);
             const name = ast.tokenSlice(x.ast.mut_token + 1);
@@ -284,24 +290,6 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
             try checkNamespace(ast, node, writer, file_name);
             return false;
         },
-        .struct_init, .struct_init_comma => {
-            const x = ast.structInit(node);
-            if (try checkValueForName(ast, search_name, x.ast.type_expr, writer, file_name)) return true;
-            if (try checkValuesForName(ast, search_name, x.ast.fields, writer, file_name)) return true;
-            return false;
-        },
-        .array_init, .array_init_comma => {
-            const x = ast.arrayInit(node);
-            if (try checkValueForName(ast, search_name, x.ast.type_expr, writer, file_name)) return true;
-            if (try checkValuesForName(ast, search_name, x.ast.elements, writer, file_name)) return true;
-            return false;
-        },
-        .call, .call_comma => {
-            const x = ast.callFull(node);
-            if (try checkValueForName(ast, search_name, x.ast.fn_expr, writer, file_name)) return true;
-            if (try checkValuesForName(ast, search_name, x.ast.params, writer, file_name)) return true;
-            return false;
-        },
 
         else => @panic(@tagName(tags[node])), // primary
     };
@@ -318,5 +306,11 @@ fn checkAstValuesForName(ast: std.zig.Ast, search_name: string, writer: std.fs.F
     inline for (fields) |item| {
         if (try checkValueForName(ast, search_name, @field(inner.ast, @tagName(item)), writer, file_name)) return true;
     }
+    return false;
+}
+
+fn checkAstParentOpForName(ast: std.zig.Ast, search_name: string, writer: std.fs.File.Writer, file_name: string, inner: anytype, comptime parent: std.meta.FieldEnum(@TypeOf(inner.ast)), comptime childs: @TypeOf(parent)) CheckError!bool {
+    if (try checkValueForName(ast, search_name, @field(inner.ast, @tagName(parent)), writer, file_name)) return true;
+    if (try checkValuesForName(ast, search_name, @field(inner.ast, @tagName(childs)), writer, file_name)) return true;
     return false;
 }
