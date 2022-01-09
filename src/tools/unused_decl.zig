@@ -195,18 +195,13 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
             .sentinel,
         }),
         .ptr_type_sentinel => try checkAstValuesForName(ast, search_name, writer, file_name, node, ast.ptrTypeSentinel(node), &.{
-            .align_node,
-            .addrspace_node,
             .sentinel,
-            .bit_range_start,
-            .bit_range_end,
             .child_type,
         }),
         .while_cont => try checkAstValuesForName(ast, search_name, writer, file_name, node, ast.whileCont(node), &.{
             .cond_expr,
             .cont_expr,
             .then_expr,
-            .else_expr,
         }),
         .array_type_sentinel => try checkAstValuesForName(ast, search_name, writer, file_name, node, ast.arrayTypeSentinel(node), &.{
             .elem_count,
@@ -242,10 +237,6 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
             if (try checkValuesForName(ast, search_name, x.ast.params, writer, file_name, node)) return true;
             return try checkAstValuesForName(ast, search_name, writer, file_name, node, x, &.{
                 .return_type,
-                .align_expr,
-                .addrspace_expr,
-                .section_expr,
-                .callconv_expr,
             });
         },
         .fn_proto_multi => {
@@ -253,10 +244,6 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
             if (try checkValuesForName(ast, search_name, x.ast.params, writer, file_name, node)) return true;
             return try checkAstValuesForName(ast, search_name, writer, file_name, node, x, &.{
                 .return_type,
-                .align_expr,
-                .addrspace_expr,
-                .section_expr,
-                .callconv_expr,
             });
         },
         .fn_proto_one => {
