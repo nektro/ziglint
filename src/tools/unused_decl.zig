@@ -47,23 +47,15 @@ fn checkNamespaceItem(ast: std.zig.Ast, ns_childs: []const NodeIndex, node: Node
             try searchForNameInNamespace(ast, x.ast.mut_token + 1, ns_childs, node, writer, file_name);
         },
 
-        .fn_decl => {}, // TODO https://github.com/nektro/ziglint/issues/6
+        // TODO https://github.com/nektro/ziglint/issues/6
+        .fn_decl => {},
 
-        .for_simple,
-        .assign,
-        .builtin_call_two,
-        .if_simple,
+        // container level tag but not a named decl we need to check, skipping
         .container_field_init,
-        .@"defer",
-        .while_simple,
-        .call_one,
-        .@"try",
-        .@"if",
-        .call,
-        .@"return",
-        .assign_add,
-        .switch_comma,
-        => {}, // TODO double check ignoring these here is correct
+        .fn_proto_simple,
+        .fn_proto_multi,
+        .test_decl,
+        => {},
 
         else => @panic(@tagName(tags[node])),
     }
