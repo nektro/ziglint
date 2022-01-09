@@ -46,15 +46,37 @@ fn checkNamespaceItem(ast: std.zig.Ast, ns_childs: []const NodeIndex, node: Node
             if (x.visib_token) |_| return;
             try searchForNameInNamespace(ast, x.ast.mut_token + 1, ns_childs, node, writer, file_name);
         },
+        .aligned_var_decl => {
+            const x = ast.alignedVarDecl(node);
+            if (x.visib_token) |_| return;
+            try searchForNameInNamespace(ast, x.ast.mut_token + 1, ns_childs, node, writer, file_name);
+        },
+        .local_var_decl => {
+            const x = ast.localVarDecl(node);
+            if (x.visib_token) |_| return;
+            try searchForNameInNamespace(ast, x.ast.mut_token + 1, ns_childs, node, writer, file_name);
+        },
+        .global_var_decl => {
+            const x = ast.globalVarDecl(node);
+            if (x.visib_token) |_| return;
+            try searchForNameInNamespace(ast, x.ast.mut_token + 1, ns_childs, node, writer, file_name);
+        },
 
         // TODO https://github.com/nektro/ziglint/issues/6
-        .fn_decl => {},
+        .fn_decl,
+        .fn_proto,
+        .fn_proto_simple,
+        .fn_proto_multi,
+        .fn_proto_one,
+        => {},
 
         // container level tag but not a named decl we need to check, skipping
         .container_field_init,
-        .fn_proto_simple,
-        .fn_proto_multi,
+        .container_field_align,
+        .container_field,
         .test_decl,
+        .@"comptime",
+        .@"usingnamespace",
         => {},
 
         else => {
@@ -404,7 +426,6 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
             const x = ast.taggedUnionTwo(&params, node);
             return try checkAstParentOpForName(ast, search_name, writer, file_name, node, x, .arg, .members);
         },
-
         .builtin_call, .builtin_call_comma => {
             const nodes = ast.extra_data[data.lhs..data.rhs];
             return try checkValuesForName(ast, search_name, nodes, writer, file_name, node);
