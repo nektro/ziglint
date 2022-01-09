@@ -92,6 +92,7 @@ fn doFile(alloc: std.mem.Allocator, dir: std.fs.Dir, path: string, rules: []cons
     if (!std.mem.endsWith(u8, path, ".zig")) return;
     // TODO eventually do .gitignore parsing
     if (std.mem.startsWith(u8, path, "zig-cache")) return;
+    if (std.mem.startsWith(u8, path, "zig-bin")) return;
     if (std.mem.startsWith(u8, path, ".zigmod")) return;
     if (std.mem.startsWith(u8, path, ".gyro")) return;
 
