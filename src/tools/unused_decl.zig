@@ -145,7 +145,6 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         },
 
         .field_access,
-        .call,
         .deref,
         .unwrap_optional,
         .optional_type,
@@ -288,6 +287,12 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
             const x = ast.arrayInit(node);
             if (try checkValueForName(ast, search_name, x.ast.type_expr, writer, file_name)) return true;
             if (try checkValuesForName(ast, search_name, x.ast.elements, writer, file_name)) return true;
+            return false;
+        },
+        .call, .call_comma => {
+            const x = ast.callFull(node);
+            if (try checkValueForName(ast, search_name, x.ast.fn_expr, writer, file_name)) return true;
+            if (try checkValuesForName(ast, search_name, x.ast.params, writer, file_name)) return true;
             return false;
         },
 
