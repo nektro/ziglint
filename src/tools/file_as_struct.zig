@@ -12,7 +12,7 @@ pub fn work(alloc: std.mem.Allocator, file_name: []const u8, src: *main.Source, 
     const rootDecls = ast.rootDecls();
 
     const has_top_level_fields = for (rootDecls) |item| {
-        if (tags[item] == .container_field_init) break true;
+        if (tags[item].isContainerField()) break true;
     } else false;
 
     const has_lower_name = std.ascii.isLower(std.fs.path.basename(file_name)[0]);
