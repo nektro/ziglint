@@ -241,7 +241,6 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
             const x = ast.fnProtoSimple(&params, node);
             if (try checkValuesForName(ast, search_name, x.ast.params, writer, file_name, node)) return true;
             return try checkAstValuesForName(ast, search_name, writer, file_name, node, x, &.{
-                // .proto_node, // TODO enabling this causes a successful compile but the app to immediately segfault during startup
                 .return_type,
                 .align_expr,
                 .addrspace_expr,
@@ -253,7 +252,6 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
             const x = ast.fnProtoMulti(node);
             if (try checkValuesForName(ast, search_name, x.ast.params, writer, file_name, node)) return true;
             return try checkAstValuesForName(ast, search_name, writer, file_name, node, x, &.{
-                // .proto_node, // TODO enabling this causes a successful compile but the app to immediately segfault during startup
                 .return_type,
                 .align_expr,
                 .addrspace_expr,
@@ -266,7 +264,6 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
             const x = ast.fnProtoOne(&params, node);
             if (try checkValuesForName(ast, search_name, x.ast.params, writer, file_name, node)) return true;
             return try checkAstValuesForName(ast, search_name, writer, file_name, node, x, &.{
-                // .proto_node, // TODO enabling this causes a successful compile but the app to immediately segfault during startup
                 .return_type,
                 .align_expr,
                 .addrspace_expr,
