@@ -164,7 +164,7 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
             .then_expr,
         }),
         .slice_sentinel => try checkAstValuesForName(ast, search_name, writer, file_name, ast.sliceSentinel(node), &.{
-            .sentinel,
+            .sliced,
             .start,
             .end,
             .sentinel,
