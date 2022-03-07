@@ -119,7 +119,6 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .float_literal,
         .multiline_string_literal,
         .asm_output,
-        .@"anytype",
         .anyframe_literal,
         => false,
 
