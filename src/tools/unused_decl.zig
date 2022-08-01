@@ -3,6 +3,7 @@ const main = @import("../main.zig");
 
 const string = []const u8;
 const NodeIndex = std.zig.Ast.Node.Index;
+const TokenIndex = std.zig.Ast.TokenIndex;
 
 pub fn work(alloc: std.mem.Allocator, file_name: string, src: *main.Source, writer: std.fs.File.Writer) main.WorkError!void {
     //
@@ -86,13 +87,13 @@ fn checkNamespaceItem(ast: std.zig.Ast, ns_childs: []const NodeIndex, node: Node
     }
 }
 
-fn searchForNameInNamespace(ast: std.zig.Ast, name_node: NodeIndex, ns_childs: []const NodeIndex, self: NodeIndex, writer: std.fs.File.Writer, file_name: string) CheckError!void {
-    const name = ast.tokenSlice(name_node);
+fn searchForNameInNamespace(ast: std.zig.Ast, name_token: TokenIndex, ns_childs: []const NodeIndex, self: NodeIndex, writer: std.fs.File.Writer, file_name: string) CheckError!void {
+    const name = ast.tokenSlice(name_token);
     for (ns_childs) |item| {
         if (item == self) continue; // definition doesn't count as a use
         if (try checkValueForName(ast, name, item, writer, file_name, self)) return;
     }
-    const loc = ast.tokenLocation(0, name_node);
+    const loc = ast.tokenLocation(0, name_token);
     try writer.print("./{s}:{d}:{d}: unused local declaration '{s}'\n", .{ file_name, loc.line + 1, loc.column + 1, name });
 }
 
