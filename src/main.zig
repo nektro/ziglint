@@ -65,21 +65,21 @@ pub fn main() !void {
 
     //
 
-    var dir = try std.fs.cwd().openDir("./", .{ .iterate = true });
+    var dir = try std.fs.cwd().openIterableDir("./", .{});
     defer dir.close();
 
     const out = std.io.getStdOut().writer();
 
     if (files) |_| {
         for (files.?) |item| {
-            try doFile(alloc, dir, item, rulestorun.items, out);
+            try doFile(alloc, dir.dir, item, rulestorun.items, out);
         }
     } else {
         var walker = try dir.walk(alloc);
         defer walker.deinit();
         while (try walker.next()) |item| {
             if (item.kind != .File) continue;
-            try doFile(alloc, dir, item.path, rulestorun.items, out);
+            try doFile(alloc, dir.dir, item.path, rulestorun.items, out);
         }
     }
 }
