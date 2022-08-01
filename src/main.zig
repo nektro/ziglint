@@ -22,7 +22,7 @@ const Rule = enum {
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const alloc = gpa.allocator();
-    defer _ = gpa.deinit();
+    defer std.debug.assert(!gpa.deinit());
 
     //
 
