@@ -3,7 +3,7 @@ const string = []const u8;
 const range = @import("range").range;
 const flag = @import("flag");
 
-const linters = [_]fn (std.mem.Allocator, []const u8, *Source, std.fs.File.Writer) WorkError!void{
+const linters = [_]*const fn (std.mem.Allocator, []const u8, *Source, std.fs.File.Writer) WorkError!void{
     @import("./tools/dupe_import.zig").work,
     @import("./tools/todo.zig").work,
     @import("./tools/file_as_struct.zig").work,
