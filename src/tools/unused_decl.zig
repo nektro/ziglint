@@ -110,14 +110,13 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .root => unreachable, // handled above by skipping node 0
 
         .string_literal,
-        .integer_literal,
+        .number_literal,
         .char_literal,
         .enum_literal,
         .error_set_decl,
         .@"continue",
         .error_value,
         .unreachable_literal,
-        .float_literal,
         .multiline_string_literal,
         .asm_output,
         .anyframe_literal,
