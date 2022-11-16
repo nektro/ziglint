@@ -22,7 +22,7 @@ $ zigmod aq install 1/nektro/ziglint
 ```
 
 ## Built With
-- Zig master `0.10.0-dev.4057+349d78a44`
+- Zig master `0.10.0`
 - [Zigmod](https://github.com/nektro/zigmod) package manager
 - See [`zig.mod`](./zig.mod)
 
@@ -46,7 +46,7 @@ jobs:
       - name: Setup Zig
         uses: goto-bus-stop/setup-zig@v1
         with:
-          version: "0.10.0-dev.4057+349d78a44"
+          version: "0.10.0"
 
       - uses: nektro/actions-setup-zigmod@v1
       - run: zigmod aq install 1/nektro/ziglint

@@ -127,7 +127,7 @@ pub const Package = struct {
 };
 
 fn checkMinZig(current: std.SemanticVersion, exe: *std.build.LibExeObjStep) void {
-    const min = std.SemanticVersion.parse("0.10.0-dev.4057+349d78a44") catch return;
+    const min = std.SemanticVersion.parse("0.10.0") catch return;
     if (current.order(min).compare(.lt)) @panic(exe.builder.fmt("Your Zig version v{} does not meet the minimum build requirement of v{}", .{current, min}));
 }
 
