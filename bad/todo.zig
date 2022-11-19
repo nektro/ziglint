@@ -1,9 +1,12 @@
-// ./bad/todo.zig:6:1: TODO: maybe the return type should be !void
-// ./bad/todo.zig:8:5: TODO: switch to something that also prints in release mode
+// ./bad/todo.zig:5:1: TODO: add top-level documentation
+// ./bad/todo.zig:9:1: TODO: maybe the return type should be !void
+// ./bad/todo.zig:11:5: TODO: switch to something that also prints in release mode
+
+//! TODO: add top-level documentation
 
 const std = @import("std");
 
-// TODO maybe the return type should be !void
+/// TODO maybe the return type should be !void
 pub fn main() void {
     // TODO switch to something that also prints in release mode
     std.log.info("{s}", .{"hello world"});
