@@ -118,7 +118,7 @@ fn negspan(alloc: std.mem.Allocator, comptime T: type, input: []const T, comptim
     defer list.deinit();
     for (input) |c| try list.append(c);
     try list.append(term);
-    const res = list.toOwnedSlice();
+    const res = try list.toOwnedSlice();
     return res[0 .. res.len - 1 :term];
 }
 
@@ -157,7 +157,7 @@ pub const Source = struct {
             if (tok.tag == .eof) break;
             try list.append(tok);
         }
-        self._tokens = list.toOwnedSlice();
+        self._tokens = try list.toOwnedSlice();
         return self._tokens.?;
     }
 
