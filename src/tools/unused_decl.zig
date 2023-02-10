@@ -1,5 +1,6 @@
 const std = @import("std");
 const main = @import("../main.zig");
+const astx = @import("../astx.zig");
 
 const string = []const u8;
 const NodeIndex = std.zig.Ast.Node.Index;
@@ -39,26 +40,8 @@ fn checkNamespaceItem(ast: std.zig.Ast, ns_childs: []const NodeIndex, node: Node
     const tags = ast.nodes.items(.tag);
 
     switch (tags[node]) {
-        .simple_var_decl => {
-            const x = ast.simpleVarDecl(node);
-            if (x.visib_token) |_| return;
-            if (x.extern_export_token) |tokidx| if (std.mem.eql(u8, ast.tokenSlice(tokidx), "export")) return;
-            try searchForNameInNamespace(ast, x.ast.mut_token + 1, ns_childs, node, writer, file_name);
-        },
-        .aligned_var_decl => {
-            const x = ast.alignedVarDecl(node);
-            if (x.visib_token) |_| return;
-            if (x.extern_export_token) |tokidx| if (std.mem.eql(u8, ast.tokenSlice(tokidx), "export")) return;
-            try searchForNameInNamespace(ast, x.ast.mut_token + 1, ns_childs, node, writer, file_name);
-        },
-        .local_var_decl => {
-            const x = ast.localVarDecl(node);
-            if (x.visib_token) |_| return;
-            if (x.extern_export_token) |tokidx| if (std.mem.eql(u8, ast.tokenSlice(tokidx), "export")) return;
-            try searchForNameInNamespace(ast, x.ast.mut_token + 1, ns_childs, node, writer, file_name);
-        },
-        .global_var_decl => {
-            const x = ast.globalVarDecl(node);
+        .simple_var_decl, .aligned_var_decl, .local_var_decl, .global_var_decl => {
+            const x = astx.varDecl(ast, node);
             if (x.visib_token) |_| return;
             if (x.extern_export_token) |tokidx| if (std.mem.eql(u8, ast.tokenSlice(tokidx), "export")) return;
             try searchForNameInNamespace(ast, x.ast.mut_token + 1, ns_childs, node, writer, file_name);
@@ -247,28 +230,13 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
             .cond_expr,
             .then_expr,
         }),
-        .slice => try checkAstValuesForName(ast, search_name, writer, file_name, node, ast.slice(node), &.{
-            .sliced,
-            .start,
-            .end,
-        }),
-        .slice_sentinel => try checkAstValuesForName(ast, search_name, writer, file_name, node, ast.sliceSentinel(node), &.{
+        .slice, .slice_sentinel => try checkAstValuesForName(ast, search_name, writer, file_name, node, astx.slice(ast, node), &.{
             .sliced,
             .start,
             .end,
             .sentinel,
         }),
-        .ptr_type_sentinel => try checkAstValuesForName(ast, search_name, writer, file_name, node, ast.ptrTypeSentinel(node), &.{
-            .sentinel,
-            .child_type,
-        }),
-        .ptr_type => try checkAstValuesForName(ast, search_name, writer, file_name, node, ast.ptrType(node), &.{
-            .align_node,
-            .addrspace_node,
-            .sentinel,
-            .child_type,
-        }),
-        .ptr_type_bit_range => try checkAstValuesForName(ast, search_name, writer, file_name, node, ast.ptrTypeBitRange(node), &.{
+        .ptr_type, .ptr_type_sentinel, .ptr_type_bit_range => try checkAstValuesForName(ast, search_name, writer, file_name, node, astx.ptrType(ast, node), &.{
             .align_node,
             .addrspace_node,
             .sentinel,
@@ -317,32 +285,8 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .tagged_union_enum_tag, .tagged_union_enum_tag_trailing => try checkAstParentOpForName(ast, search_name, writer, file_name, node, ast.taggedUnionEnumTag(node), .arg, .members),
         // zig fmt: on
 
-        .simple_var_decl => {
-            const x = ast.simpleVarDecl(node);
-            const name = ast.tokenSlice(x.ast.mut_token + 1);
-            if (std.mem.eql(u8, search_name, name)) return true;
-            if (try checkValueForName(ast, search_name, x.ast.type_node, writer, file_name, node)) return true;
-            if (try checkValueForName(ast, search_name, x.ast.init_node, writer, file_name, node)) return true;
-            return false;
-        },
-        .local_var_decl => {
-            const x = ast.localVarDecl(node);
-            const name = ast.tokenSlice(x.ast.mut_token + 1);
-            if (std.mem.eql(u8, search_name, name)) return true;
-            if (try checkValueForName(ast, search_name, x.ast.type_node, writer, file_name, node)) return true;
-            if (try checkValueForName(ast, search_name, x.ast.init_node, writer, file_name, node)) return true;
-            return false;
-        },
-        .aligned_var_decl => {
-            const x = ast.alignedVarDecl(node);
-            const name = ast.tokenSlice(x.ast.mut_token + 1);
-            if (std.mem.eql(u8, search_name, name)) return true;
-            if (try checkValueForName(ast, search_name, x.ast.type_node, writer, file_name, node)) return true;
-            if (try checkValueForName(ast, search_name, x.ast.init_node, writer, file_name, node)) return true;
-            return false;
-        },
-        .global_var_decl => {
-            const x = ast.globalVarDecl(node);
+        .simple_var_decl, .local_var_decl, .aligned_var_decl, .global_var_decl => {
+            const x = astx.varDecl(ast, node);
             const name = ast.tokenSlice(x.ast.mut_token + 1);
             if (std.mem.eql(u8, search_name, name)) return true;
             if (try checkValueForName(ast, search_name, x.ast.type_node, writer, file_name, node)) return true;
