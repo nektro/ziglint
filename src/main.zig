@@ -4,10 +4,10 @@ const range = @import("range").range;
 const flag = @import("flag");
 
 const linters = [_]*const fn (std.mem.Allocator, []const u8, *Source, std.fs.File.Writer) WorkError!void{
-    @import("./tools/dupe_import.zig").work,
-    @import("./tools/todo.zig").work,
-    @import("./tools/file_as_struct.zig").work,
-    @import("./tools/unused.zig").work,
+    @import("./rules/dupe_import.zig").work,
+    @import("./rules/todo.zig").work,
+    @import("./rules/file_as_struct.zig").work,
+    @import("./rules/unused.zig").work,
 };
 
 pub const WorkError = std.mem.Allocator.Error || std.fs.File.Writer.Error || error{};
