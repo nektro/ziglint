@@ -11,6 +11,7 @@ const linters = [_]*const fn (std.mem.Allocator, []const u8, *Source, std.fs.Fil
 };
 
 pub const WorkError = std.mem.Allocator.Error || std.fs.File.Writer.Error || error{};
+pub const CheckError = std.fs.File.Writer.Error || error{};
 
 const Rule = enum {
     dupe_import,

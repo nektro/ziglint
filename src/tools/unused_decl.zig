@@ -6,16 +6,13 @@ const NodeIndex = std.zig.Ast.Node.Index;
 const TokenIndex = std.zig.Ast.TokenIndex;
 
 pub fn work(alloc: std.mem.Allocator, file_name: string, src: *main.Source, writer: std.fs.File.Writer) main.WorkError!void {
-    //
     _ = alloc;
 
     const ast = try src.ast();
     try checkNamespace(ast, 0, writer, file_name);
 }
 
-const CheckError = std.fs.File.Writer.Error || error{};
-
-fn checkNamespace(ast: std.zig.Ast, ns_node: NodeIndex, writer: std.fs.File.Writer, file_name: string) CheckError!void {
+fn checkNamespace(ast: std.zig.Ast, ns_node: NodeIndex, writer: std.fs.File.Writer, file_name: string) main.CheckError!void {
     const tags = ast.nodes.items(.tag);
     const data = ast.nodes.items(.data)[ns_node];
 
@@ -38,7 +35,7 @@ fn checkNamespace(ast: std.zig.Ast, ns_node: NodeIndex, writer: std.fs.File.Writ
     }
 }
 
-fn checkNamespaceItem(ast: std.zig.Ast, ns_childs: []const NodeIndex, node: NodeIndex, writer: std.fs.File.Writer, file_name: string, owner: NodeIndex) CheckError!void {
+fn checkNamespaceItem(ast: std.zig.Ast, ns_childs: []const NodeIndex, node: NodeIndex, writer: std.fs.File.Writer, file_name: string, owner: NodeIndex) main.CheckError!void {
     const tags = ast.nodes.items(.tag);
 
     switch (tags[node]) {
@@ -91,7 +88,7 @@ fn checkNamespaceItem(ast: std.zig.Ast, ns_childs: []const NodeIndex, node: Node
     }
 }
 
-fn searchForNameInNamespace(ast: std.zig.Ast, name_token: TokenIndex, ns_childs: []const NodeIndex, self: NodeIndex, writer: std.fs.File.Writer, file_name: string) CheckError!void {
+fn searchForNameInNamespace(ast: std.zig.Ast, name_token: TokenIndex, ns_childs: []const NodeIndex, self: NodeIndex, writer: std.fs.File.Writer, file_name: string) main.CheckError!void {
     const name = ast.tokenSlice(name_token);
     for (ns_childs) |item| {
         if (item == self) continue; // definition doesn't count as a use
@@ -101,7 +98,7 @@ fn searchForNameInNamespace(ast: std.zig.Ast, name_token: TokenIndex, ns_childs:
     try writer.print("./{s}:{d}:{d}: unused local declaration '{s}'\n", .{ file_name, loc.line + 1, loc.column + 1, name });
 }
 
-fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, writer: std.fs.File.Writer, file_name: string, owner: NodeIndex) CheckError!bool {
+fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, writer: std.fs.File.Writer, file_name: string, owner: NodeIndex) main.CheckError!bool {
     if (node == 0) return false;
     const tags = ast.nodes.items(.tag);
     const datas = ast.nodes.items(.data);
@@ -437,21 +434,21 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
     };
 }
 
-fn checkValuesForName(ast: std.zig.Ast, search_name: string, nodes: []const NodeIndex, writer: std.fs.File.Writer, file_name: string, owner: NodeIndex) CheckError!bool {
+fn checkValuesForName(ast: std.zig.Ast, search_name: string, nodes: []const NodeIndex, writer: std.fs.File.Writer, file_name: string, owner: NodeIndex) main.CheckError!bool {
     for (nodes) |item| {
         if (try checkValueForName(ast, search_name, item, writer, file_name, owner)) return true;
     }
     return false;
 }
 
-fn checkAstValuesForName(ast: std.zig.Ast, search_name: string, writer: std.fs.File.Writer, file_name: string, owner: NodeIndex, inner: anytype, comptime fields: []const std.meta.FieldEnum(@TypeOf(inner.ast))) CheckError!bool {
+fn checkAstValuesForName(ast: std.zig.Ast, search_name: string, writer: std.fs.File.Writer, file_name: string, owner: NodeIndex, inner: anytype, comptime fields: []const std.meta.FieldEnum(@TypeOf(inner.ast))) main.CheckError!bool {
     inline for (fields) |item| {
         if (try checkValueForName(ast, search_name, @field(inner.ast, @tagName(item)), writer, file_name, owner)) return true;
     }
     return false;
 }
 
-fn checkAstParentOpForName(ast: std.zig.Ast, search_name: string, writer: std.fs.File.Writer, file_name: string, owner: NodeIndex, inner: anytype, comptime parent: std.meta.FieldEnum(@TypeOf(inner.ast)), comptime childs: @TypeOf(parent)) CheckError!bool {
+fn checkAstParentOpForName(ast: std.zig.Ast, search_name: string, writer: std.fs.File.Writer, file_name: string, owner: NodeIndex, inner: anytype, comptime parent: std.meta.FieldEnum(@TypeOf(inner.ast)), comptime childs: @TypeOf(parent)) main.CheckError!bool {
     if (try checkValueForName(ast, search_name, @field(inner.ast, @tagName(parent)), writer, file_name, owner)) return true;
     if (try checkValuesForName(ast, search_name, @field(inner.ast, @tagName(childs)), writer, file_name, owner)) return true;
     return false;
