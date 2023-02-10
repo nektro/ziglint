@@ -165,7 +165,7 @@ pub const Source = struct {
         if (self._ast) |_| {
             return self._ast.?;
         }
-        self._ast = try std.zig.parse(self.alloc, self.source);
+        self._ast = try std.zig.Ast.parse(self.alloc, self.source, .zig);
         return self._ast.?;
     }
 };

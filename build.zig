@@ -4,11 +4,9 @@ const deps = @import("./deps.zig");
 pub fn build(b: *std.build.Builder) void {
     const target = b.standardTargetOptions(.{});
 
-    const mode = b.standardReleaseOptions();
+    const optimize = b.standardOptimizeOption(.{});
 
-    const exe = b.addExecutable("ziglint", "src/main.zig");
-    exe.setTarget(target);
-    exe.setBuildMode(mode);
+    const exe = b.addExecutable(.{ .name = "ziglint", .root_source_file = .{ .path = "src/main.zig" }, .target = target, .optimize = optimize });
     deps.addAllTo(exe);
     exe.install();
 
