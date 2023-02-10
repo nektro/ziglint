@@ -45,21 +45,25 @@ fn checkNamespaceItem(ast: std.zig.Ast, ns_childs: []const NodeIndex, node: Node
         .simple_var_decl => {
             const x = ast.simpleVarDecl(node);
             if (x.visib_token) |_| return;
+            if (x.extern_export_token) |tokidx| if (std.mem.eql(u8, ast.tokenSlice(tokidx), "export")) return;
             try searchForNameInNamespace(ast, x.ast.mut_token + 1, ns_childs, node, writer, file_name);
         },
         .aligned_var_decl => {
             const x = ast.alignedVarDecl(node);
             if (x.visib_token) |_| return;
+            if (x.extern_export_token) |tokidx| if (std.mem.eql(u8, ast.tokenSlice(tokidx), "export")) return;
             try searchForNameInNamespace(ast, x.ast.mut_token + 1, ns_childs, node, writer, file_name);
         },
         .local_var_decl => {
             const x = ast.localVarDecl(node);
             if (x.visib_token) |_| return;
+            if (x.extern_export_token) |tokidx| if (std.mem.eql(u8, ast.tokenSlice(tokidx), "export")) return;
             try searchForNameInNamespace(ast, x.ast.mut_token + 1, ns_childs, node, writer, file_name);
         },
         .global_var_decl => {
             const x = ast.globalVarDecl(node);
             if (x.visib_token) |_| return;
+            if (x.extern_export_token) |tokidx| if (std.mem.eql(u8, ast.tokenSlice(tokidx), "export")) return;
             try searchForNameInNamespace(ast, x.ast.mut_token + 1, ns_childs, node, writer, file_name);
         },
 

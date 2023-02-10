@@ -11,6 +11,7 @@ pub fn main() void {
 const foo = struct {
     const bar = struct {};
     pub const bam = enum { a };
+    export const qux = 4;
 
     fn baz() void {
         _ = x;
