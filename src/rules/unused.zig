@@ -108,7 +108,7 @@ fn searchForNameInNamespace(ast: std.zig.Ast, name_token: TokenIndex, ns_childs:
     const name = ast.tokenSlice(name_token);
     for (ns_childs) |item| {
         if (item == self) continue; // definition doesn't count as a use
-        if (functions_checked.has(item)) continue;
+        if (boundedarray_has(functions_checked, item)) continue;
         if (try checkValueForName(ast, name, item, writer, file_name, self)) return;
     }
     const loc = ast.tokenLocation(0, name_token);
@@ -117,6 +117,13 @@ fn searchForNameInNamespace(ast: std.zig.Ast, name_token: TokenIndex, ns_childs:
     previous[0] = file_name;
     previous[1] = loc.line;
     previous[2] = loc.column;
+}
+
+pub fn boundedarray_has(self: @TypeOf(functions_checked), needle: NodeIndex) bool {
+    for (self.constSlice()) |item| {
+        if (item == needle) return true;
+    }
+    return false;
 }
 
 fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, writer: std.fs.File.Writer, file_name: string, owner: NodeIndex) main.CheckError!bool {
