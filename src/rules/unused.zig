@@ -6,10 +6,16 @@ const string = []const u8;
 const NodeIndex = std.zig.Ast.Node.Index;
 const TokenIndex = std.zig.Ast.TokenIndex;
 
+const Mode = enum { declaration, function };
+var previous: struct { string, usize, usize } = .{ "", 0, 0 };
+var functions_checked = std.BoundedArray(NodeIndex, 1024).init(0) catch unreachable;
+
 pub fn work(alloc: std.mem.Allocator, file_name: string, src: *main.Source, writer: std.fs.File.Writer) main.WorkError!void {
     _ = alloc;
 
     const ast = try src.ast();
+    defer previous[0] = "";
+    defer functions_checked.resize(0) catch {};
     try checkNamespace(ast, 0, writer, file_name);
 }
 
@@ -38,22 +44,49 @@ fn checkNamespace(ast: std.zig.Ast, ns_node: NodeIndex, writer: std.fs.File.Writ
 
 fn checkNamespaceItem(ast: std.zig.Ast, ns_childs: []const NodeIndex, node: NodeIndex, writer: std.fs.File.Writer, file_name: string, owner: NodeIndex) main.CheckError!void {
     const tags = ast.nodes.items(.tag);
+    const datas = ast.nodes.items(.data);
 
     switch (tags[node]) {
         .simple_var_decl, .aligned_var_decl, .local_var_decl, .global_var_decl => {
             const x = astx.varDecl(ast, node);
             if (x.visib_token) |_| return;
             if (x.extern_export_token) |tokidx| if (std.mem.eql(u8, ast.tokenSlice(tokidx), "export")) return;
-            try searchForNameInNamespace(ast, x.ast.mut_token + 1, ns_childs, node, writer, file_name);
+            try searchForNameInNamespace(ast, x.ast.mut_token + 1, ns_childs, node, writer, file_name, .declaration);
         },
 
-        // TODO https://github.com/nektro/ziglint/issues/6
-        .fn_decl,
-        .fn_proto,
-        .fn_proto_simple,
-        .fn_proto_multi,
-        .fn_proto_one,
-        => {},
+        .fn_decl => {
+            try checkNamespaceItem(ast, ns_childs, datas[node].lhs, writer, file_name, node);
+        },
+        .fn_proto => {
+            const x = ast.fnProto(node);
+            if (x.visib_token) |_| return;
+            if (x.extern_export_inline_token) |tokidx| if (std.mem.eql(u8, ast.tokenSlice(tokidx), "export")) return;
+            functions_checked.append(node) catch return;
+            try searchForNameInNamespace(ast, x.ast.fn_token + 1, ast.rootDecls(), 0, writer, file_name, .function);
+        },
+        .fn_proto_multi => {
+            const x = ast.fnProtoMulti(node);
+            if (x.visib_token) |_| return;
+            if (x.extern_export_inline_token) |tokidx| if (std.mem.eql(u8, ast.tokenSlice(tokidx), "export")) return;
+            functions_checked.append(node) catch return;
+            try searchForNameInNamespace(ast, x.ast.fn_token + 1, ast.rootDecls(), 0, writer, file_name, .function);
+        },
+        .fn_proto_simple => {
+            var params: [1]NodeIndex = undefined;
+            const x = ast.fnProtoSimple(&params, node);
+            if (x.visib_token) |_| return;
+            if (x.extern_export_inline_token) |tokidx| if (std.mem.eql(u8, ast.tokenSlice(tokidx), "export")) return;
+            functions_checked.append(node) catch return;
+            try searchForNameInNamespace(ast, x.ast.fn_token + 1, ast.rootDecls(), 0, writer, file_name, .function);
+        },
+        .fn_proto_one => {
+            var params: [1]NodeIndex = undefined;
+            const x = ast.fnProtoOne(&params, node);
+            if (x.visib_token) |_| return;
+            if (x.extern_export_inline_token) |tokidx| if (std.mem.eql(u8, ast.tokenSlice(tokidx), "export")) return;
+            functions_checked.append(node) catch return;
+            try searchForNameInNamespace(ast, x.ast.fn_token + 1, ast.rootDecls(), 0, writer, file_name, .function);
+        },
 
         // container level tag but not a named decl we need to check, skipping
         .container_field_init,
@@ -71,14 +104,19 @@ fn checkNamespaceItem(ast: std.zig.Ast, ns_childs: []const NodeIndex, node: Node
     }
 }
 
-fn searchForNameInNamespace(ast: std.zig.Ast, name_token: TokenIndex, ns_childs: []const NodeIndex, self: NodeIndex, writer: std.fs.File.Writer, file_name: string) main.CheckError!void {
+fn searchForNameInNamespace(ast: std.zig.Ast, name_token: TokenIndex, ns_childs: []const NodeIndex, self: NodeIndex, writer: std.fs.File.Writer, file_name: string, mode: Mode) main.CheckError!void {
     const name = ast.tokenSlice(name_token);
     for (ns_childs) |item| {
         if (item == self) continue; // definition doesn't count as a use
+        if (functions_checked.has(item)) continue;
         if (try checkValueForName(ast, name, item, writer, file_name, self)) return;
     }
     const loc = ast.tokenLocation(0, name_token);
-    try writer.print("./{s}:{d}:{d}: unused local declaration '{s}'\n", .{ file_name, loc.line + 1, loc.column + 1, name });
+    if (std.mem.eql(u8, previous[0], file_name) and previous[1] == loc.line and previous[2] == loc.column) return;
+    try writer.print("./{s}:{d}:{d}: unused local {s} '{s}'\n", .{ file_name, loc.line + 1, loc.column + 1, @tagName(mode), name });
+    previous[0] = file_name;
+    previous[1] = loc.line;
+    previous[2] = loc.column;
 }
 
 fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, writer: std.fs.File.Writer, file_name: string, owner: NodeIndex) main.CheckError!bool {
