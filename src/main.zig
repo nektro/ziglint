@@ -23,7 +23,7 @@ const Rule = enum {
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const alloc = gpa.allocator();
-    defer std.debug.assert(!gpa.deinit());
+    defer std.debug.assert(gpa.deinit() == .ok);
 
     //
 
@@ -79,7 +79,7 @@ pub fn main() !void {
         var walker = try dir.walk(alloc);
         defer walker.deinit();
         while (try walker.next()) |item| {
-            if (item.kind != .File) continue;
+            if (item.kind != .file) continue;
             try doFile(alloc, dir.dir, item.path, rulestorun.items, out);
         }
     }
@@ -110,7 +110,7 @@ fn doFile(alloc: std.mem.Allocator, dir: std.fs.Dir, path: string, rules: []cons
     };
 
     for (rules) |jtem| {
-        try linters[@enumToInt(jtem)](alloc2, path, &src, out);
+        try linters[@intFromEnum(jtem)](alloc2, path, &src, out);
     }
 }
 
@@ -131,7 +131,7 @@ pub const Loc = struct {
 pub fn locToLoc(source: [:0]const u8, loc: std.zig.Token.Loc) Loc {
     var line: usize = 1;
     var pos: usize = 1;
-    for (range(loc.start)) |_, i| {
+    for (range(loc.start), 0..) |_, i| {
         pos += 1;
         if (source[i] != '\n') continue;
         line += 1;
@@ -172,7 +172,7 @@ pub const Source = struct {
 };
 
 fn removeItem(comptime T: type, haystack: *std.ArrayList(T), needle: T) ?T {
-    for (haystack.items) |item, i| {
+    for (haystack.items, 0..) |item, i| {
         if (item == needle) return haystack.orderedRemove(i);
     }
     return null;

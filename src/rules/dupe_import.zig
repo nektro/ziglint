@@ -9,7 +9,7 @@ pub fn work(alloc: std.mem.Allocator, file_name: []const u8, src: *main.Source, 
     var map = std.StringHashMap(main.Loc).init(alloc);
     defer map.deinit();
 
-    for (tokens) |tok, i| {
+    for (tokens, 0..) |tok, i| {
         if (i + 4 >= tokens.len) break;
 
         const a = tokens[i + 0].tag == .builtin;

@@ -13,7 +13,12 @@ pub const GitExactStep = struct {
         pub fn create(b: *std.build.Builder, url: string, commit: string) *GitExactStep {
             var result = b.allocator.create(GitExactStep) catch @panic("memory");
             result.* = GitExactStep{
-                .step = std.build.Step.init(.custom, b.fmt("git clone {s} @ {s}", .{ url, commit }), b.allocator, make),
+                .step = std.build.Step.init(.{
+                    .id = .custom,
+                    .name = b.fmt("git clone {s} @ {s}", .{ url, commit }),
+                    .owner = b,
+                    .makeFn = make,
+                }),
                 .builder = b,
                 .url = url,
                 .commit = commit,
@@ -22,7 +27,7 @@ pub const GitExactStep = struct {
             var urlpath = url;
             urlpath = trimPrefix(u8, urlpath, "https://");
             urlpath = trimPrefix(u8, urlpath, "git://");
-            const repopath = b.fmt("{s}/zigmod/deps/git/{s}/{s}", .{ b.cache_root, urlpath, commit });
+            const repopath = b.fmt("{s}/zigmod/deps/git/{s}/{s}", .{ b.cache_root.path.?, urlpath, commit });
             flip(std.fs.cwd().access(repopath, .{})) catch return result;
 
             var clonestep = std.build.RunStep.create(b, "clone");
@@ -32,24 +37,26 @@ pub const GitExactStep = struct {
             var checkoutstep = std.build.RunStep.create(b, "checkout");
             checkoutstep.addArgs(&.{ "git", "-C", repopath, "checkout", "-q", commit });
             result.step.dependOn(&checkoutstep.step);
+            checkoutstep.step.dependOn(&clonestep.step);
 
             return result;
         }
 
-        fn make(step: *std.build.Step) !void {
+        fn make(step: *std.build.Step, prog_node: *std.Progress.Node) !void {
             _ = step;
+            _ = prog_node;
         }
 };
 
 pub fn fetch(exe: *std.build.LibExeObjStep) void {
-    const b = exe.builder;
+    const b = exe.step.owner;
     inline for (comptime std.meta.declarations(package_data)) |decl| {
         const path = &@field(package_data, decl.name).entry;
-        const root = if (@field(package_data, decl.name).store) |_| b.cache_root else ".";
+        const root = if (@field(package_data, decl.name).store) |_| b.cache_root.path.? else ".";
         if (path.* != null) path.* = b.fmt("{s}/zigmod/deps{s}", .{ root, path.*.? });
     }
-    exe.step.dependOn(&GitExactStep.create(b, "https://github.com/nektro/zig-extras", "3fe700ebc8ff66966abe145166bfdf546b3a8422").step);
-    exe.step.dependOn(&GitExactStep.create(b, "https://github.com/nektro/zig-flag", "07ea6a3daa950f7bbd8bbd60c0cc2251806fde95").step);
+    exe.step.dependOn(&GitExactStep.create(b, "https://github.com/nektro/zig-extras", "8628846c832086d97f28c54eab157cda389c319a").step);
+    exe.step.dependOn(&GitExactStep.create(b, "https://github.com/nektro/zig-flag", "4a03000239d5e05062cf9344a08e0dc43ad8ebd1").step);
     exe.step.dependOn(&GitExactStep.create(b, "https://github.com/nektro/zig-range", "4b2f12808aa09be4b27a163efc424dd4e0415992").step);
 }
 
@@ -68,7 +75,7 @@ fn flip(foo: anytype) !void {
 pub fn addAllTo(exe: *std.build.LibExeObjStep) void {
     checkMinZig(builtin.zig_version, exe);
     fetch(exe);
-    const b = exe.builder;
+    const b = exe.step.owner;
     @setEvalBranchQuota(1_000_000);
     for (packages) |pkg| {
         const moddep = pkg.zp(b);
@@ -78,22 +85,22 @@ pub fn addAllTo(exe: *std.build.LibExeObjStep) void {
     var vcpkg = false;
     inline for (comptime std.meta.declarations(package_data)) |decl| {
         const pkg = @as(Package, @field(package_data, decl.name));
-        const root = if (pkg.store) |st| b.fmt("{s}/zigmod/deps/{s}", .{ b.cache_root, st }) else ".";
+        const root = if (pkg.store) |st| b.fmt("{s}/zigmod/deps/{s}", .{ b.cache_root.path.?, st }) else ".";
         for (pkg.system_libs) |item| {
             exe.linkSystemLibrary(item);
             llc = true;
         }
         for (pkg.frameworks) |item| {
-            if (!builtin.target.isDarwin()) @panic(exe.builder.fmt("a dependency is attempting to link to the framework {s}, which is only possible under Darwin", .{item}));
+            if (!builtin.target.isDarwin()) @panic(exe.step.owner.fmt("a dependency is attempting to link to the framework {s}, which is only possible under Darwin", .{item}));
             exe.linkFramework(item);
             llc = true;
         }
         for (pkg.c_include_dirs) |item| {
-            exe.addIncludePath(b.fmt("{s}/{s}", .{ root, item }));
+            exe.addIncludePath(.{.path = b.fmt("{s}/{s}", .{ root, item })});
             llc = true;
         }
         for (pkg.c_source_files) |item| {
-            exe.addCSourceFile(b.fmt("{s}/{s}", .{ root, item }), pkg.c_source_flags);
+            exe.addCSourceFile(.{ .file = .{ .path = b.fmt("{s}/{s}", .{ root, item }) }, .flags = pkg.c_source_flags });
             llc = true;
         }
         vcpkg = vcpkg or pkg.vcpkg;
@@ -113,52 +120,57 @@ pub const Package = struct {
     system_libs: []const string = &.{},
     frameworks: []const string = &.{},
     vcpkg: bool = false,
+    module: ?ModuleDependency = null,
 
-    pub fn zp(self: *const Package, b: *std.build.Builder) ModuleDependency {
+    pub fn zp(self: *Package, b: *std.build.Builder) ModuleDependency {
         var temp: [100]ModuleDependency = undefined;
-        for (self.deps) |item, i| {
+        for (self.deps, 0..) |item, i| {
             temp[i] = item.zp(b);
         }
-        return .{
+        if (self.module) |mod| {
+            return mod;
+        }
+        const result = ModuleDependency{
             .name = self.name,
             .module = b.createModule(.{
                 .source_file = .{ .path = self.entry.? },
                 .dependencies = b.allocator.dupe(ModuleDependency, temp[0..self.deps.len]) catch @panic("oom"),
             }),
         };
+        self.module = result;
+        return result;
     }
 };
 
 fn checkMinZig(current: std.SemanticVersion, exe: *std.build.LibExeObjStep) void {
-    const min = std.SemanticVersion.parse("0.11.0-dev.1570+693b12f8e") catch return;
-    if (current.order(min).compare(.lt)) @panic(exe.builder.fmt("Your Zig version v{} does not meet the minimum build requirement of v{}", .{current, min}));
+    const min = std.SemanticVersion.parse("0.11.0") catch return;
+    if (current.order(min).compare(.lt)) @panic(exe.step.owner.fmt("Your Zig version v{} does not meet the minimum build requirement of v{}", .{current, min}));
 }
 
 pub const package_data = struct {
     pub var _8dglro8ootvr = Package{
+    };
+    pub var _f7dubzb7cyqe = Package{
+        .store = "/git/github.com/nektro/zig-extras/8628846c832086d97f28c54eab157cda389c319a",
+        .name = "extras",
+        .entry = "/git/github.com/nektro/zig-extras/8628846c832086d97f28c54eab157cda389c319a/src/lib.zig",
     };
     pub var _tnj3qf44tpeq = Package{
         .store = "/git/github.com/nektro/zig-range/4b2f12808aa09be4b27a163efc424dd4e0415992",
         .name = "range",
         .entry = "/git/github.com/nektro/zig-range/4b2f12808aa09be4b27a163efc424dd4e0415992/src/lib.zig",
     };
-    pub var _f7dubzb7cyqe = Package{
-        .store = "/git/github.com/nektro/zig-extras/3fe700ebc8ff66966abe145166bfdf546b3a8422",
-        .name = "extras",
-        .entry = "/git/github.com/nektro/zig-extras/3fe700ebc8ff66966abe145166bfdf546b3a8422/src/lib.zig",
-        .deps = &[_]*Package{ &_tnj3qf44tpeq },
-    };
     pub var _pm68dn67ppvl = Package{
-        .store = "/git/github.com/nektro/zig-flag/07ea6a3daa950f7bbd8bbd60c0cc2251806fde95",
+        .store = "/git/github.com/nektro/zig-flag/4a03000239d5e05062cf9344a08e0dc43ad8ebd1",
         .name = "flag",
-        .entry = "/git/github.com/nektro/zig-flag/07ea6a3daa950f7bbd8bbd60c0cc2251806fde95/src/lib.zig",
+        .entry = "/git/github.com/nektro/zig-flag/4a03000239d5e05062cf9344a08e0dc43ad8ebd1/src/lib.zig",
         .deps = &[_]*Package{ &_f7dubzb7cyqe, &_tnj3qf44tpeq },
     };
     pub var _root = Package{
     };
 };
 
-pub const packages = [_]*const Package{
+pub const packages = [_]*Package{
     &package_data._tnj3qf44tpeq,
     &package_data._pm68dn67ppvl,
 };

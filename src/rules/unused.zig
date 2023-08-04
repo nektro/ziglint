@@ -227,6 +227,7 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
         .add_sat,
         .sub_sat,
         .shl_sat,
+        .for_range,
         => {
             if (try checkValueForName(ast, search_name, data.lhs, writer, file_name, node)) return true;
             if (try checkValueForName(ast, search_name, data.rhs, writer, file_name, node)) return true;
@@ -299,11 +300,11 @@ fn checkValueForName(ast: std.zig.Ast, search_name: string, node: NodeIndex, wri
             .sentinel,
             .elem_type,
         }),
-        .@"for" => try checkAstValuesForName(ast, search_name, writer, file_name, node, ast.forFull(node), &.{
-            .cond_expr,
-            .then_expr,
-            .else_expr,
-        }),
+        .@"for" => {
+            if (try checkValuesForName(ast, search_name, ast.forFull(node).ast.inputs, writer, file_name, node)) return true;
+            if (try checkAstValuesForName(ast, search_name, writer, file_name, node, ast.forFull(node), &.{ .then_expr, .else_expr })) return true;
+            return false;
+        },
         .@"while" => try checkAstValuesForName(ast, search_name, writer, file_name, node, ast.whileFull(node), &.{
             .cond_expr,
             .cont_expr,
