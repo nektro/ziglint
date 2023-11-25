@@ -1,6 +1,5 @@
 const std = @import("std");
 const string = []const u8;
-const range = @import("range").range;
 const flag = @import("flag");
 
 const linters = [_]*const fn (std.mem.Allocator, []const u8, *Source, std.fs.File.Writer) WorkError!void{
@@ -131,7 +130,7 @@ pub const Loc = struct {
 pub fn locToLoc(source: [:0]const u8, loc: std.zig.Token.Loc) Loc {
     var line: usize = 1;
     var pos: usize = 1;
-    for (range(loc.start), 0..) |_, i| {
+    for (0..loc.start) |i| {
         pos += 1;
         if (source[i] != '\n') continue;
         line += 1;

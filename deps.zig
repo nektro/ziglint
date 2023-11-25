@@ -57,7 +57,6 @@ pub fn fetch(exe: *std.build.LibExeObjStep) void {
     }
     exe.step.dependOn(&GitExactStep.create(b, "https://github.com/nektro/zig-extras", "05f0e90a185cb04a09b96f686dffc6375c420e9b").step);
     exe.step.dependOn(&GitExactStep.create(b, "https://github.com/nektro/zig-flag", "3d3596ec79017afc6bd5d2f3a902bd2a10a904e4").step);
-    exe.step.dependOn(&GitExactStep.create(b, "https://github.com/nektro/zig-range", "4b2f12808aa09be4b27a163efc424dd4e0415992").step);
 }
 
 fn trimPrefix(comptime T: type, haystack: []const T, needle: []const T) []const T {
@@ -166,22 +165,15 @@ pub const package_data = struct {
         .entry = "/git/github.com/nektro/zig-flag/3d3596ec79017afc6bd5d2f3a902bd2a10a904e4/src/lib.zig",
         .deps = &[_]*Package{ &_f7dubzb7cyqe },
     };
-    pub var _tnj3qf44tpeq = Package{
-        .store = "/git/github.com/nektro/zig-range/4b2f12808aa09be4b27a163efc424dd4e0415992",
-        .name = "range",
-        .entry = "/git/github.com/nektro/zig-range/4b2f12808aa09be4b27a163efc424dd4e0415992/src/lib.zig",
-    };
     pub var _root = Package{
     };
 };
 
 pub const packages = [_]*Package{
-    &package_data._tnj3qf44tpeq,
     &package_data._pm68dn67ppvl,
 };
 
 pub const pkgs = struct {
-    pub const range = &package_data._tnj3qf44tpeq;
     pub const flag = &package_data._pm68dn67ppvl;
 };
 
