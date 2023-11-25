@@ -56,7 +56,7 @@ pub fn fetch(exe: *std.build.LibExeObjStep) void {
         if (path.* != null) path.* = b.fmt("{s}/zigmod/deps{s}", .{ root, path.*.? });
     }
     exe.step.dependOn(&GitExactStep.create(b, "https://github.com/nektro/zig-extras", "05f0e90a185cb04a09b96f686dffc6375c420e9b").step);
-    exe.step.dependOn(&GitExactStep.create(b, "https://github.com/nektro/zig-flag", "4a03000239d5e05062cf9344a08e0dc43ad8ebd1").step);
+    exe.step.dependOn(&GitExactStep.create(b, "https://github.com/nektro/zig-flag", "3d3596ec79017afc6bd5d2f3a902bd2a10a904e4").step);
     exe.step.dependOn(&GitExactStep.create(b, "https://github.com/nektro/zig-range", "4b2f12808aa09be4b27a163efc424dd4e0415992").step);
 }
 
@@ -155,16 +155,16 @@ pub const package_data = struct {
         .name = "extras",
         .entry = "/git/github.com/nektro/zig-extras/05f0e90a185cb04a09b96f686dffc6375c420e9b/src/lib.zig",
     };
+    pub var _pm68dn67ppvl = Package{
+        .store = "/git/github.com/nektro/zig-flag/3d3596ec79017afc6bd5d2f3a902bd2a10a904e4",
+        .name = "flag",
+        .entry = "/git/github.com/nektro/zig-flag/3d3596ec79017afc6bd5d2f3a902bd2a10a904e4/src/lib.zig",
+        .deps = &[_]*Package{ &_f7dubzb7cyqe },
+    };
     pub var _tnj3qf44tpeq = Package{
         .store = "/git/github.com/nektro/zig-range/4b2f12808aa09be4b27a163efc424dd4e0415992",
         .name = "range",
         .entry = "/git/github.com/nektro/zig-range/4b2f12808aa09be4b27a163efc424dd4e0415992/src/lib.zig",
-    };
-    pub var _pm68dn67ppvl = Package{
-        .store = "/git/github.com/nektro/zig-flag/4a03000239d5e05062cf9344a08e0dc43ad8ebd1",
-        .name = "flag",
-        .entry = "/git/github.com/nektro/zig-flag/4a03000239d5e05062cf9344a08e0dc43ad8ebd1/src/lib.zig",
-        .deps = &[_]*Package{ &_f7dubzb7cyqe, &_tnj3qf44tpeq },
     };
     pub var _root = Package{
     };
